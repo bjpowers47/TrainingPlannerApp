@@ -1,23 +1,10 @@
-from app.workbook import WorkbookManager
+from app.app import SoccerTrainingManager
 
-wb = WorkbookManager()
 
-wb.open("Soccer 101 Training Schedule.xlsx")
+def main():
+    app = SoccerTrainingManager()
+    app.mainloop()
 
-print()
 
-print("Headers")
-
-print("--------------------")
-
-print(wb.get_headers())
-
-print()
-
-print("Rows")
-
-print("--------------------")
-
-for session in wb.get_sessions():
-
-    print(session.values)
+if __name__ == "__main__":
+    main()
