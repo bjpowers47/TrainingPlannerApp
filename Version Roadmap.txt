@@ -1,0 +1,12 @@
+Version Roadmap
+Version	Status	Goal
+✅ 0.1	Complete	Application framework
+🚧 0.2	Starting	Training Schedule Manager
+0.3	Planned	Drill Library
+0.4	Planned	Player Manager
+0.5	Planned	Attendance
+0.6	Planned	Reports & PDF Export
+0.7	Planned	Calendar View
+0.8	Planned	Statistics & Charts
+0.9	Planned	Final UI Polish
+1.0	Planned	Windows Installer & Release
