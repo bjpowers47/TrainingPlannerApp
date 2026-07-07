@@ -1,61 +1,46 @@
+import customtkinter as ctk
 from tkinter import ttk
 
 
-class SessionTable(ttk.Treeview):
+class SessionTable(ctk.CTkFrame):
 
-    COLUMNS = (
-        "Date",
-        "Start",
-        "End",
-        "Age Group",
-        "Topic",
-        "Location",
-        "Coach"
-    )
+    def __init__(self, parent):
+        super().__init__(parent)
 
-    def __init__(self, master):
+        self.tree = ttk.Treeview(self, show="headings")
 
-        super().__init__(
-            master,
-            columns=self.COLUMNS,
-            show="headings",
-            selectmode="browse"
+        scrollbar = ttk.Scrollbar(
+            self,
+            orient="vertical",
+            command=self.tree.yview
         )
 
-        for column in self.COLUMNS:
-            self.heading(column, text=column)
-            self.column(
-                column,
-                width=120,
-                anchor="center",
-                stretch=True
-            )
+        self.tree.configure(yscrollcommand=scrollbar.set)
 
-    def clear(self):
-        """Remove all rows."""
-        for item in self.get_children():
-            self.delete(item)
+        self.tree.pack(
+            side="left",
+            fill="both",
+            expand=True
+        )
 
-    def load_sessions(self, sessions):
-        """Load TrainingSession objects into the table."""
+        scrollbar.pack(
+            side="right",
+            fill="y"
+        )
 
-        self.clear()
+    def load_data(self, headers, sessions):
+
+        self.tree.delete(*self.tree.get_children())
+
+        self.tree["columns"] = headers
+
+        for header in headers:
+            self.tree.heading(header, text=str(header))
+            self.tree.column(header, width=120, anchor="center")
 
         for session in sessions:
-
-            values = session.values[:7]
-
-            while len(values) < 7:
-                values.append("")
-
-            self.insert("", "end", values=values)
-
-    def selected(self):
-        """Return the selected row id."""
-
-        selection = self.selection()
-
-        if not selection:
-            return None
-
-        return selection[0]
+            self.tree.insert(
+                "",
+                "end",
+                values=session.values
+            )
