@@ -15,15 +15,23 @@ import customtkinter as ctk
 class DevelopmentLibraryPage(ctk.CTkFrame):
     """Read-only Development Library page."""
 
-    def __init__(self, parent, development_library_service):
+    def __init__(
+        self,
+        parent,
+        development_library_service,
+        selected_phase=None,
+    ):
         super().__init__(parent)
 
         self.service = development_library_service
+        self.selected_phase = selected_phase
         self.selected_block_id = None
         self.selected_drill_ids = set()
 
         self.build_ui()
         self.load_blocks()
+
+        self.show_welcome_message()
 
     def build_ui(self):
         self.grid_columnconfigure(0, weight=0)
@@ -78,6 +86,24 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             sticky="w",
             padx=20
         )
+
+    def show_welcome_message(self):
+        """Display the opening message."""
+
+        self.details_box.delete("1.0", "end")
+
+        if self.selected_phase:
+            self.details_box.insert(
+                "end",
+                f"{self.selected_phase} Drills\n\n"
+                "Select one or more drills."
+            )
+        else:
+            self.details_box.insert(
+                "end",
+                "Development Library\n\n"
+                "Select a Practice Phase."
+            )
 
     def load_blocks(self):
         blocks = [

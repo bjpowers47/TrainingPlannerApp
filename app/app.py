@@ -163,6 +163,19 @@ class SoccerTrainingManager(ctk.CTk):
 
         page = PracticeBuilderPage(
             self.content,
-            self.current_practice
+            self.current_practice,
+            self.show_development_library_for_phase,
+        )
+        page.pack(fill="both", expand=True)
+
+    def show_development_library_for_phase(self, phase):
+        """Open the Development Library for a selected practice phase."""
+
+        self.clear_content()
+
+        page = DevelopmentLibraryPage(
+            self.content,
+            self.development_library_service,
+            selected_phase=phase,
         )
         page.pack(fill="both", expand=True)

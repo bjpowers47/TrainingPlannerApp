@@ -15,10 +15,12 @@ import customtkinter as ctk
 class PracticeBuilderPage(ctk.CTkFrame):
     """Early Practice Builder page."""
 
-    def __init__(self, parent, practice):
+    def __init__(self, parent, practice, open_library_callback):
         super().__init__(parent)
 
         self.practice = practice
+
+        self.open_library_callback = open_library_callback
 
         self.phases = [
             "⚽ Ball Mastery",
@@ -118,11 +120,15 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 text="No activities selected yet.",
                 font=("Segoe UI", 14),
             )
-            placeholder.pack(
-                anchor="w",
-                padx=25,
-                pady=(0, 12),
+            placeholder.pack(anchor="w", padx=25, pady=(0, 6))
+
+            browse_button = ctk.CTkButton(
+                section,
+                text=f"Browse {phase}",
+                command=lambda selected_phase=phase: self.browse_library(selected_phase),
             )
+
+            browse_button.pack(anchor="w", padx=25, pady=(0, 12))
 
     def refresh_summary(self):
         """Update the displayed Practice Summary."""
@@ -135,3 +141,8 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 "Estimated Time: Coming Soon"
             )
         )
+
+    def browse_library(self, phase):
+        """Open the Development Library for the selected phase."""
+
+        self.open_library_callback(phase)
