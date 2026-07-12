@@ -167,6 +167,8 @@ class SoccerTrainingManager(ctk.CTk):
             self.show_development_library_for_phase,
         )
         page.pack(fill="both", expand=True)
+        page.lift()
+        page.focus_set()
 
     def show_development_library_for_phase(self, phase):
         """Open the library for a selected practice phase."""
@@ -209,8 +211,9 @@ class SoccerTrainingManager(ctk.CTk):
         }
 
         practice_phase = phase_names.get(phase)
-
+       
         if practice_phase is None:
+            print("Phase mapping failed")
             return
 
         for drill in drills:
@@ -220,3 +223,4 @@ class SoccerTrainingManager(ctk.CTk):
             )
 
         self.show_practice_builder()
+       

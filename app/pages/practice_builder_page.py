@@ -181,3 +181,5 @@ class PracticeBuilderPage(ctk.CTkFrame):
         """Open the Development Library for the selected phase."""
 
         self.open_library_callback(phase)
+
+       

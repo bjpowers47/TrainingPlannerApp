@@ -34,6 +34,8 @@ class Practice:
 
     def get_activities(self, phase: str):
         """Return all activities for a phase."""
+    
+        return self.activities[phase]
 
     def get_phase_names(self):
         """Return the practice phases in display order."""
@@ -47,13 +49,11 @@ class Practice:
             "Review",
         ]
 
-        return self.activities[phase]
-    
-    def has_activities(self, phase):
-        """Return True if the phase contains activities."""
+    def has_activities(self, phase: str) -> bool:
+        """Return True when a phase contains activities."""
 
         return len(self.activities[phase]) > 0
-    
+
     def activity_count(self) -> int:
         """Return the total number of activities in the practice."""
 
