@@ -169,7 +169,16 @@ class SoccerTrainingManager(ctk.CTk):
         page.pack(fill="both", expand=True)
 
     def show_development_library_for_phase(self, phase):
-        """Open the Development Library for a selected practice phase."""
+        """Open the library for a selected practice phase."""
+
+        phase_block_ids = {
+            "⚽ Ball Mastery": 1,
+            "🎯 Movement": 2,
+            "🥇 1v1": 3,
+            "👥 Small Group": 4,
+            "🥅 Match Application": 5,
+            "📝 Review": 6,
+        }
 
         self.clear_content()
 
@@ -177,5 +186,37 @@ class SoccerTrainingManager(ctk.CTk):
             self.content,
             self.development_library_service,
             selected_phase=phase,
+            add_to_practice_callback=self.add_drills_to_practice,
         )
+
         page.pack(fill="both", expand=True)
+
+        block_id = phase_block_ids.get(phase)
+
+        if block_id is not None:
+            page.show_drills(block_id)
+    
+    def add_drills_to_practice(self, phase, drills):
+        """Add selected drills and return to the Practice Builder."""
+
+        phase_names = {
+            "⚽ Ball Mastery": "Ball Mastery",
+            "🎯 Movement": "Movement",
+            "🥇 1v1": "1v1",
+            "👥 Small Group": "Small Group",
+            "🥅 Match Application": "Match Application",
+            "📝 Review": "Review",
+        }
+
+        practice_phase = phase_names.get(phase)
+
+        if practice_phase is None:
+            return
+
+        for drill in drills:
+            self.current_practice.add_activity(
+                practice_phase,
+                drill,
+            )
+
+        self.show_practice_builder()
