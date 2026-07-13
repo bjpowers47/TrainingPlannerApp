@@ -31,12 +31,6 @@ class Practice:
         """Add an activity to a practice phase."""
 
         self.activities[phase].append(activity)
-
-    def get_activities(self, phase: str):
-        """Return all activities for a phase."""
-    
-        return self.activities[phase]
-
     def get_phase_names(self):
         """Return the practice phases in display order."""
 
@@ -63,3 +57,12 @@ class Practice:
             total += len(activities)
 
         return total
+    def remove_activity(self, phase: str, activity) -> None:
+        """Remove an activity from a practice phase."""
+
+        if activity in self.activities[phase]:
+            self.activities[phase].remove(activity)
+    def get_activities(self, phase: str):
+        """Return all activities for a phase."""
+    
+        return self.activities[phase]

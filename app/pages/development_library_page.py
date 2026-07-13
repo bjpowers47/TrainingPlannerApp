@@ -175,7 +175,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
 
         blocks = [
             (1, "⚽ Ball Mastery"),
-            (2, "🥇 Movement"),
+            (2, "🎯 Movement"),
             (3, "🥇 1v1"),
             (4, "👥 Small Group"),
             (5, "🥅 Match Application"),

@@ -90,7 +90,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         phase_display_names = {
             "Ball Mastery": "⚽ Ball Mastery",
-            "Movement": "🥇 Movement",
+            "Movement": "🎯 Movement",
             "1v1": "🥇 1v1",
             "Small Group": "👥 Small Group",
             "Match Application": "🥅 Match Application",
@@ -130,15 +130,40 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
             if activities:
                 for activity in activities:
-                    activity_label = ctk.CTkLabel(
+                    activity_row = ctk.CTkFrame(
                         section,
+                        fg_color="transparent",
+                    )
+                    activity_row.pack(
+                        fill="x",
+                        padx=25,
+                        pady=2,
+                    )
+
+                    activity_label = ctk.CTkLabel(
+                        activity_row,
                         text=f"• {activity.name}",
                         font=("Segoe UI", 14),
                     )
                     activity_label.pack(
+                        side="left",
                         anchor="w",
-                        padx=25,
-                        pady=2,
+                    )
+
+                    remove_button = ctk.CTkButton(
+                        activity_row,
+                        text="✕",
+                        width=32,
+                        command=lambda selected_phase=phase, selected_activity=activity: (
+                            self.remove_activity(
+                                selected_phase,
+                                selected_activity,
+                            )
+                        ),
+                    )
+                    remove_button.pack(
+                        side="right",
+                        padx=(10, 0),
                     )
             else:
                 placeholder = ctk.CTkLabel(
@@ -176,10 +201,24 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 "Estimated Time: Coming Soon"
             )
         )
-
     def browse_library(self, phase):
         """Open the Development Library for the selected phase."""
 
         self.open_library_callback(phase)
+    def remove_activity(self, phase, activity):
+        """Remove an activity and refresh the Practice Builder."""
 
-       
+        self.practice.remove_activity(
+            phase,
+            activity,
+        )
+
+        self.refresh_page()
+    def refresh_page(self):
+        """Rebuild the page from the current Practice model."""
+
+        for widget in self.winfo_children():
+            widget.destroy()
+
+        self.build_ui()
+        self.refresh_summary() 
