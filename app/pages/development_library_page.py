@@ -261,8 +261,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         else:
             self.selected_drill_ids.add(drill_id)
 
-        print(f"Selected drill IDs: {self.selected_drill_ids}")
-
     def show_drill_details(self, drill):
         """Display the selected drill's information."""
 

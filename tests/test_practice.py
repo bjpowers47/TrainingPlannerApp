@@ -28,6 +28,13 @@ def main():
 
     assert len(activities) == 1
     assert activities[0].name == "Toe Taps"
+    practice.name = "Tuesday Ball Mastery"
+
+    practice.save_to_json(
+        "data/test_practice.json"
+    )
+
+    print("✓ Practice JSON saved")
 
     print("✓ Practice test passed")
 

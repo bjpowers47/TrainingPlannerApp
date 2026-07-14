@@ -8,13 +8,14 @@ Module:
 Purpose:
     Represents the practice currently being built.
 """
-
-from dataclasses import dataclass, field
-
-
+import json
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 @dataclass
 class Practice:
     """Represents a single practice."""
+
+    name: str = "Untitled Practice"
 
     activities: dict = field(
         default_factory=lambda: {
@@ -57,6 +58,43 @@ class Practice:
             total += len(activities)
 
         return total
+    def total_duration(self) -> int:
+        """Return the total estimated practice duration in minutes."""
+
+        total = 0
+
+        for phase in self.activities.values():
+            for activity in phase:
+                total += activity.duration_minutes
+
+        return total
+    def save_to_json(self, filename: str) -> None:
+        """Save the practice to a JSON file."""
+
+        file_path = Path(filename)
+
+        practice_data = {
+            "name": self.name,
+            "activities": {},
+        }
+
+        for phase, activities in self.activities.items():
+            practice_data["activities"][phase] = []
+
+            for activity in activities:
+                practice_data["activities"][phase].append(
+                    asdict(activity)
+                )
+
+        with file_path.open(
+            "w",
+            encoding="utf-8",
+        ) as output_file:
+            json.dump(
+                practice_data,
+                output_file,
+                indent=4,
+            )
     def remove_activity(self, phase: str, activity) -> None:
         """Remove an activity from a practice phase."""
 

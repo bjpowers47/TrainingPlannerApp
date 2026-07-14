@@ -191,14 +191,15 @@ class PracticeBuilderPage(ctk.CTkFrame):
             )
             
     def refresh_summary(self):
-        """Update the displayed Practice Summary."""
+        """Update the Practice Summary."""
 
         activity_count = self.practice.activity_count()
+        total_minutes = self.practice.total_duration()
 
         self.summary_text.configure(
             text=(
                 f"Activities: {activity_count}\n"
-                "Estimated Time: Coming Soon"
+                f"Estimated Time: {total_minutes} minutes"
             )
         )
     def browse_library(self, phase):
