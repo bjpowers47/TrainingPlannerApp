@@ -10,6 +10,7 @@ from app.services.development_library_service import DevelopmentLibraryService
 from app.pages.development_library_page import DevelopmentLibraryPage
 from app.pages.practice_builder_page import PracticeBuilderPage
 from app.models.practice import Practice
+from app.constants.player_development import get_phase_by_name
 
 class SoccerTrainingManager(ctk.CTk):
 
@@ -84,6 +85,33 @@ class SoccerTrainingManager(ctk.CTk):
         ).pack(fill="x", padx=10, pady=5)
           
         self.show_dashboard()
+        ctk.CTkButton(
+            self.sidebar,
+            text="Open Practice",
+            command=self.open_practice,
+        ).pack(
+            fill="x",
+            padx=15,
+            pady=5,
+        )
+        ctk.CTkButton(
+            self.sidebar,
+            text="New Practice",
+            command=self.new_practice,
+        ).pack(
+            fill="x",
+            padx=15,
+            pady=5,
+        ) 
+        ctk.CTkButton(
+            self.sidebar,
+            text="Save Practice",
+            command=self.save_practice,
+        ).pack(
+            fill="x",
+            padx=15,
+            pady=5,
+        )       
 
     def clear_content(self):
         for widget in self.content.winfo_children():
@@ -171,16 +199,10 @@ class SoccerTrainingManager(ctk.CTk):
         page.focus_set()
 
     def show_development_library_for_phase(self, phase):
-        """Open the library for a selected practice phase."""
+        """Open the library for a selected development phase."""
 
-        phase_block_ids = {
-            "⚽ Ball Mastery": 1,
-            "🎯 Movement": 2,
-            "🥇 1v1": 3,
-            "👥 Small Group": 4,
-            "🥅 Match Application": 5,
-            "📝 Review": 6,
-        }
+        selected_development_phase = get_phase_by_name(phase)
+        block_id = selected_development_phase.id
 
         self.clear_content()
 
@@ -192,35 +214,60 @@ class SoccerTrainingManager(ctk.CTk):
         )
 
         page.pack(fill="both", expand=True)
-
-        block_id = phase_block_ids.get(phase)
-
+        block_id = selected_development_phase.id
+        
         if block_id is not None:
             page.show_drills(block_id)
     
     def add_drills_to_practice(self, phase, drills):
         """Add selected drills and return to the Practice Builder."""
 
-        phase_names = {
-            "⚽ Ball Mastery": "Ball Mastery",
-            "🎯 Movement": "Movement",
-            "🥇 1v1": "1v1",
-            "👥 Small Group": "Small Group",
-            "🥅 Match Application": "Match Application",
-            "📝 Review": "Review",
-        }
-
-        practice_phase = phase_names.get(phase)
-       
-        if practice_phase is None:
-            print("Phase mapping failed")
-            return
-
         for drill in drills:
             self.current_practice.add_activity(
-                practice_phase,
+                phase,
                 drill,
             )
 
         self.show_practice_builder()
+    def open_practice(self):
+        """Open a previously saved practice."""
+
+        filename = filedialog.askopenfilename(
+            title="Open Practice",
+            filetypes=[
+                ("JSON Files", "*.json"),
+                ("All Files", "*.*"),
+            ],
+        )
+
+        if not filename:
+            return
+
+        self.current_practice = Practice.load_from_json(
+            filename
+        )
+
+        self.show_practice_builder()
+    def new_practice(self):
+        """Start a brand-new practice."""
+
+        self.current_practice = Practice()
+
+        self.show_practice_builder()
+    def save_practice(self):
+        """Save the current practice."""
+
+        filename = filedialog.asksaveasfilename(
+            title="Save Practice",
+            defaultextension=".json",
+            filetypes=[
+                ("JSON Files", "*.json"),
+                ("All Files", "*.*"),
+            ],
+        )
+
+        if not filename:
+            return
+
+        self.current_practice.save_to_json(filename)
        

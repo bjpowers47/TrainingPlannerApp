@@ -10,7 +10,9 @@ Purpose:
 """
 
 import customtkinter as ctk
-
+from app.constants.development_phases import DEVELOPMENT_PHASES
+from app.constants.player_development import DEVELOPMENT_PHASES
+from app.constants.player_development import get_display_name
 
 class PracticeBuilderPage(ctk.CTkFrame):
     """Early Practice Builder page."""
@@ -23,12 +25,8 @@ class PracticeBuilderPage(ctk.CTkFrame):
         self.open_library_callback = open_library_callback
 
         self.phases = [
-            "⚽ Ball Mastery",
-            "🎯 Movement",
-            "🥇 1v1",
-            "👥 Small Group",
-            "🥅 Match Application",
-            "📝 Review",
+            f"{phase.icon} {phase.name}"
+            for phase in DEVELOPMENT_PHASES
         ]
 
         self.build_ui()
@@ -88,14 +86,6 @@ class PracticeBuilderPage(ctk.CTkFrame):
             pady=10,
         )
 
-        phase_display_names = {
-            "Ball Mastery": "⚽ Ball Mastery",
-            "Movement": "🎯 Movement",
-            "1v1": "🥇 1v1",
-            "Small Group": "👥 Small Group",
-            "Match Application": "🥅 Match Application",
-            "Review": "📝 Review",
-        }
 
         for phase in self.practice.get_phase_names():
             section = ctk.CTkFrame(self.phase_frame)
@@ -107,7 +97,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
             label = ctk.CTkLabel(
                 section,
-                text=phase_display_names[phase],
+                text=get_display_name(phase),
                 font=("Segoe UI", 22, "bold"),
             )
             label.pack(
@@ -180,7 +170,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             browse_button = ctk.CTkButton(
                 section,
                 text=f"Browse {phase} Drills",
-                command=lambda selected_phase=phase_display_names[phase]: (
+                command=lambda selected_phase=phase: (
                     self.browse_library(selected_phase)
                 ),
             )

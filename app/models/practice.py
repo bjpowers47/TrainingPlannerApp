@@ -8,9 +8,14 @@ Module:
 Purpose:
     Represents the practice currently being built.
 """
+
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from app.models.drill import Drill
+from app.constants.player_development import get_phase_names
+
+
 @dataclass
 class Practice:
     """Represents a single practice."""
@@ -19,30 +24,31 @@ class Practice:
 
     activities: dict = field(
         default_factory=lambda: {
-            "Ball Mastery": [],
-            "Movement": [],
-            "1v1": [],
-            "Small Group": [],
-            "Match Application": [],
-            "Review": [],
-        }
-    )
+            phase_name: []
+            for phase_name in get_phase_names()
+    }
+)
+    
 
-    def add_activity(self, phase: str, activity):
+    def add_activity(self, phase: str, activity) -> None:
         """Add an activity to a practice phase."""
 
         self.activities[phase].append(activity)
-    def get_phase_names(self):
-        """Return the practice phases in display order."""
 
-        return [
-            "Ball Mastery",
-            "Movement",
-            "1v1",
-            "Small Group",
-            "Match Application",
-            "Review",
-        ]
+    def remove_activity(self, phase: str, activity) -> None:
+        """Remove an activity from a practice phase."""
+
+        if activity in self.activities[phase]:
+            self.activities[phase].remove(activity)
+
+    def get_activities(self, phase: str):
+        """Return all activities for a phase."""
+
+        return self.activities[phase]
+
+    def get_phase_names(self) -> list[str]:
+        """Return the practice phases in display order."""
+        return get_phase_names()
 
     def has_activities(self, phase: str) -> bool:
         """Return True when a phase contains activities."""
@@ -58,16 +64,18 @@ class Practice:
             total += len(activities)
 
         return total
+
     def total_duration(self) -> int:
         """Return the total estimated practice duration in minutes."""
 
         total = 0
 
-        for phase in self.activities.values():
-            for activity in phase:
+        for activities in self.activities.values():
+            for activity in activities:
                 total += activity.duration_minutes
 
         return total
+
     def save_to_json(self, filename: str) -> None:
         """Save the practice to a JSON file."""
 
@@ -95,12 +103,40 @@ class Practice:
                 output_file,
                 indent=4,
             )
-    def remove_activity(self, phase: str, activity) -> None:
-        """Remove an activity from a practice phase."""
+    @classmethod
+    def load_from_json(cls, filename: str):
+        """Create a Practice from a saved JSON file."""
 
-        if activity in self.activities[phase]:
-            self.activities[phase].remove(activity)
-    def get_activities(self, phase: str):
-        """Return all activities for a phase."""
-    
-        return self.activities[phase]
+        file_path = Path(filename)
+
+        with file_path.open(
+            "r",
+            encoding="utf-8",
+        ) as input_file:
+            practice_data = json.load(input_file)
+
+        practice = cls(
+            name=practice_data.get(
+                "name",
+                "Untitled Practice",
+            )
+        )
+
+        saved_activities = practice_data.get(
+            "activities",
+            {},
+        )
+
+        for phase in practice.get_phase_names():
+            phase_activities = saved_activities.get(
+                phase,
+                [],
+            )
+
+            for activity_data in phase_activities:
+                practice.add_activity(
+                    phase,
+                    Drill(**activity_data),
+                )
+
+        return practice

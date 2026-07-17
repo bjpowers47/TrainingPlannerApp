@@ -10,6 +10,7 @@ Purpose:
 """
 
 import customtkinter as ctk
+from app.constants.player_development import DEVELOPMENT_PHASES
 
 
 class DevelopmentLibraryPage(ctk.CTkFrame):
@@ -171,22 +172,13 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             )
 
     def load_blocks(self):
-        """Create the Practice Phase buttons."""
+        """Create the Development Phase buttons."""
 
-        blocks = [
-            (1, "⚽ Ball Mastery"),
-            (2, "🎯 Movement"),
-            (3, "🥇 1v1"),
-            (4, "👥 Small Group"),
-            (5, "🥅 Match Application"),
-            (6, "📝 Review"),
-        ]
-
-        for block_id, name in blocks:
+        for phase in DEVELOPMENT_PHASES:
             button = ctk.CTkButton(
                 self.blocks_frame,
-                text=name,
-                command=lambda selected_id=block_id: self.show_drills(
+                text=f"{phase.icon} {phase.name}",
+                command=lambda selected_id=phase.id: self.show_drills(
                     selected_id
                 ),
             )
@@ -195,7 +187,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
                 padx=10,
                 pady=6,
             )
-
     def show_drills(self, block_id):
         """Display drills for the selected Practice Phase."""
 
@@ -325,9 +316,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
 
     def submit_selected_drills(self):
         """Add selected drills to the current practice."""
-        print(f"Submitting drill IDs: {self.selected_drill_ids}")
-        print(f"Selected phase: {self.selected_phase}")
-        print(f"Callback: {self.add_to_practice_callback}")
+
         selected_drills = []
 
         for drill_id in self.selected_drill_ids:
