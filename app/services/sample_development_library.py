@@ -40,10 +40,22 @@ def load_sample_drills(repository_manager):
             equipment=["Balls", "Cones"],
         )
     )
-
     repository_manager.drills.save(
         Drill(
             id=3,
+            name="Shuffles",
+            development_block_id=1,
+            technical_focus_id=1,
+            purpose="Control the ball.",
+            duration_minutes=10,
+            recommended_players="Any",
+            equipment=["Balls"],
+        )
+    )
+
+    repository_manager.drills.save(
+        Drill(
+            id=4,
             name="1v1 Gate Attack",
             development_block_id=3,
             technical_focus_id=3,

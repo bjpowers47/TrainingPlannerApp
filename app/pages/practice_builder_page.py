@@ -139,6 +139,37 @@ class PracticeBuilderPage(ctk.CTkFrame):
                         side="left",
                         anchor="w",
                     )
+                    move_up_button = ctk.CTkButton(
+                        activity_row,
+                        text="▲",
+                        width=32,
+                        command=lambda selected_phase=phase, selected_activity=activity: (
+                            self.move_activity_up(
+                                selected_phase,
+                                selected_activity,
+                            )
+                        ),
+                    )
+                    move_up_button.pack(
+                        side="right",
+                        padx=(5, 0),
+                    )
+
+                    move_down_button = ctk.CTkButton(
+                        activity_row,
+                        text="▼",
+                        width=32,
+                        command=lambda selected_phase=phase, selected_activity=activity: (
+                            self.move_activity_down(
+                                selected_phase,
+                                selected_activity,
+                            )
+                        ),
+                    )
+                    move_down_button.pack(
+                        side="right",
+                        padx=(5, 0),
+                    )
 
                     remove_button = ctk.CTkButton(
                         activity_row,
@@ -203,6 +234,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             phase,
             activity,
         )
+        
 
         self.refresh_page()
     def refresh_page(self):
@@ -213,3 +245,43 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         self.build_ui()
         self.refresh_summary() 
+    def move_activity_up(self, phase, activity):
+        """Move an activity one position earlier within its phase."""
+
+        activities = self.practice.activities.get(phase, [])
+
+        try:
+            current_index = activities.index(activity)
+        except ValueError:
+            return
+
+        if current_index == 0:
+            return
+
+        activities[current_index - 1], activities[current_index] = (
+            activities[current_index],
+            activities[current_index - 1],
+        )
+
+        self.refresh_page()
+
+
+    def move_activity_down(self, phase, activity):
+        """Move an activity one position later within its phase."""
+
+        activities = self.practice.activities.get(phase, [])
+
+        try:
+            current_index = activities.index(activity)
+        except ValueError:
+            return
+
+        if current_index >= len(activities) - 1:
+            return
+
+        activities[current_index + 1], activities[current_index] = (
+            activities[current_index],
+            activities[current_index + 1],
+        )
+
+        self.refresh_page()
