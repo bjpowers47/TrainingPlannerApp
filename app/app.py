@@ -202,7 +202,10 @@ class SoccerTrainingManager(ctk.CTk):
         """Open the library for a selected development phase."""
 
         selected_development_phase = get_phase_by_name(phase)
-        block_id = selected_development_phase.id
+
+        if selected_development_phase is None:
+            print(f"Unknown development phase: {phase}")
+            return
 
         self.clear_content()
 
@@ -214,10 +217,8 @@ class SoccerTrainingManager(ctk.CTk):
         )
 
         page.pack(fill="both", expand=True)
-        block_id = selected_development_phase.id
-        
-        if block_id is not None:
-            page.show_drills(block_id)
+
+        page.show_drills(selected_development_phase)
     
     def add_drills_to_practice(self, phase, drills):
         """Add selected drills and return to the Practice Builder."""

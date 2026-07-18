@@ -178,19 +178,20 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             button = ctk.CTkButton(
                 self.blocks_frame,
                 text=f"{phase.icon} {phase.name}",
-                command=lambda selected_id=phase.id: self.show_drills(
-                    selected_id
-                ),
+                command=lambda p=phase: self.show_drills(p),
             )
             button.pack(
                 fill="x",
                 padx=10,
                 pady=6,
             )
-    def show_drills(self, block_id):
+    def show_drills(self, phase):
         """Display drills for the selected Practice Phase."""
 
-        self.selected_block_id = block_id
+        self.selected_phase = phase.name
+        self.selected_block_id = phase.id
+
+        block_id = phase.id
 
         for widget in self.drills_frame.winfo_children():
             widget.destroy()
@@ -347,3 +348,11 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             self.selected_phase,
             selected_drills,
         )
+        def select_phase(self, phase_name: str, block_id: int) -> None:
+            """Select a development phase and display its drills."""
+
+            self.selected_phase = phase_name
+            self.selected_drill_ids.clear()
+
+            self.load_drills(block_id)
+            self.show_phase_instructions(phase_name)
