@@ -14,10 +14,23 @@ Responsibilities:
 """
 
 from app.repositories.drill_repository import DrillRepository
+from collections import defaultdict
 
 
 class DevelopmentLibraryService:
     """Service layer for the Development Library."""
+    
+    def get_drills_by_phase(self):
+        """Return active drills grouped by development phase ID."""
+
+        grouped = defaultdict(list)
+
+        drills = self.get_all_drills()
+
+        for drill in drills:
+            grouped[drill.development_block_id].append(drill)
+
+        return grouped
 
     def __init__(self, drill_repository: DrillRepository):
         self._drill_repository = drill_repository

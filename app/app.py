@@ -9,8 +9,12 @@ from app.services.sample_development_library import load_sample_drills
 from app.services.development_library_service import DevelopmentLibraryService
 from app.pages.development_library_page import DevelopmentLibraryPage
 from app.pages.practice_builder_page import PracticeBuilderPage
+from app.pages.administration_page import AdministrationPage
+from app.pages.drill_manager_page import DrillManagerPage
 from app.models.practice import Practice
 from app.constants.player_development import get_phase_by_name
+from app.pages.drill_editor_page import DrillEditorPage
+from app.models.drill import Drill
 
 class SoccerTrainingManager(ctk.CTk):
 
@@ -111,7 +115,17 @@ class SoccerTrainingManager(ctk.CTk):
             fill="x",
             padx=15,
             pady=5,
-        )       
+        )    
+        administration_button = ctk.CTkButton(
+            self.sidebar,
+            text="Administration",
+            command=self.show_administration,
+        )
+        administration_button.pack(
+            fill="x",
+            padx=15,
+            pady=6,
+        )   
 
     def clear_content(self):
         for widget in self.content.winfo_children():
@@ -271,4 +285,62 @@ class SoccerTrainingManager(ctk.CTk):
             return
 
         self.current_practice.save_to_json(filename)
-       
+    def show_administration(self):
+        """Display the Administration dashboard."""
+
+        self.clear_content()
+
+        page = AdministrationPage(
+            self.content,
+            open_drill_manager_callback=self.show_drill_manager,
+        )
+        page.pack(
+            fill="both",
+            expand=True,
+        )
+    def show_drill_manager(self):
+        print("show_drill_manager called")
+
+        self.clear_content()
+
+        page = DrillManagerPage(
+            self.content,
+            self.development_library_service,
+            on_new_drill=self.show_drill_editor,
+        )
+
+        page.pack(fill="both", expand=True)
+    def show_drill_editor(self):
+        self.clear_content()
+
+        page = DrillEditorPage(
+            self.content,
+            on_save=self.handle_drill_editor_save,
+            on_cancel=self.show_drill_manager,
+        )
+
+        page.pack(fill="both", expand=True)
+    def handle_drill_editor_save(self, data):
+        """Create and save a drill from the editor form."""
+
+        existing_drills = self.repositories.drills.get_all()
+        next_id = max(
+            (drill.id for drill in existing_drills),
+            default=0,
+        ) + 1
+
+        drill = Drill(
+            id=next_id,
+            name=data["name"].strip(),
+            development_block_id=1,  # Temporary: Ball Mastery
+            technical_focus_id=None,
+            purpose=data["purpose"].strip(),
+            duration_minutes=int(data["duration_minutes"] or 0),
+            recommended_players=data["recommended_players"].strip(),
+        )
+
+        self.repositories.drills.save(drill)
+
+        print(f"Saved drill: {drill.name} (ID {drill.id})")
+
+        self.show_drill_manager()
