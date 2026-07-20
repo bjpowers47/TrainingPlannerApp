@@ -13,7 +13,6 @@ class DrillEditorPage(ctk.CTkFrame):
         on_save=None,
         on_cancel=None,
     ):
-        print("DrillEditorPage __init__ called")
         super().__init__(master)
 
         self.on_save = on_save

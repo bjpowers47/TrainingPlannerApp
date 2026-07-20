@@ -61,14 +61,6 @@ def get_phase_by_id(phase_id):
             return phase
     raise ValueError(f"Unknown development phase ID: {phase_id}")
 
-
-def get_phase_by_name(name):
-    for phase in DEVELOPMENT_PHASES:
-        if phase.name == name:
-            return phase
-    raise ValueError(f"Unknown development phase: {name}")
-
-
 def get_display_name(name):
     phase = get_phase_by_name(name)
     return f"{phase.icon} {phase.name}"

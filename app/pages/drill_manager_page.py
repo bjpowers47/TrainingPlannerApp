@@ -1,4 +1,3 @@
-print("Loaded drill_manager_page.py")
 import customtkinter as ctk
 from app.models.player_development import get_phase_by_id
 from app.constants.player_development import DEVELOPMENT_PHASES
@@ -16,11 +15,8 @@ class DrillManagerPage(ctk.CTkFrame):
         self.drill_service = drill_service
         self.on_new_drill = on_new_drill
 
-        print("on_new_drill callback:", self.on_new_drill)
-
         self.build_ui()
     def _handle_new_drill(self):
-        print("New Drill button handler called")
 
         if self.on_new_drill:
             self.on_new_drill()

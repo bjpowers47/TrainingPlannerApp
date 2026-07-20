@@ -60,13 +60,17 @@ def get_phase_by_id(phase_id: int) -> DevelopmentPhase:
     raise ValueError(f"Unknown development phase ID: {phase_id}")
 
 
-def get_phase_by_name(name: str) -> DevelopmentPhase:
-    """Return a development phase by its name."""
+def get_phase_by_name(name: str):
+    """Return a DevelopmentPhase by its display name."""
+    print(f"get_phase_by_name() called with: {name}")
+    # Remove the icon if present
+    clean_name = name.replace("⚽ ", "").replace("🎯 ", "").strip()
+    print(f"Cleaned name: {clean_name}")
     for phase in DEVELOPMENT_PHASES:
-        if phase.name == name:
+        if phase.name == clean_name:
             return phase
-    raise ValueError(f"Unknown development phase: {name}")
 
+    return None
 
 def get_display_name(name: str) -> str:
     """Return the icon and name for display in the UI."""

@@ -12,7 +12,7 @@ from app.pages.practice_builder_page import PracticeBuilderPage
 from app.pages.administration_page import AdministrationPage
 from app.pages.drill_manager_page import DrillManagerPage
 from app.models.practice import Practice
-from app.constants.player_development import get_phase_by_name
+from app.models.player_development import get_phase_by_name
 from app.pages.drill_editor_page import DrillEditorPage
 from app.models.drill import Drill
 
@@ -299,7 +299,6 @@ class SoccerTrainingManager(ctk.CTk):
             expand=True,
         )
     def show_drill_manager(self):
-        print("show_drill_manager called")
 
         self.clear_content()
 
@@ -329,10 +328,17 @@ class SoccerTrainingManager(ctk.CTk):
             default=0,
         ) + 1
 
+        phase = get_phase_by_name(data["development_phase"])
+
+        if phase is None:
+            raise ValueError(
+                f"Unknown development phase: {data['development_phase']}"
+            )
+
         drill = Drill(
             id=next_id,
             name=data["name"].strip(),
-            development_block_id=1,  # Temporary: Ball Mastery
+            development_block_id=phase.id,
             technical_focus_id=None,
             purpose=data["purpose"].strip(),
             duration_minutes=int(data["duration_minutes"] or 0),
@@ -341,6 +347,9 @@ class SoccerTrainingManager(ctk.CTk):
 
         self.repositories.drills.save(drill)
 
-        print(f"Saved drill: {drill.name} (ID {drill.id})")
+        print(
+            f"Saved drill: {drill.name} "
+            f"(ID {drill.id}, phase ID {drill.development_block_id})"
+        )
 
         self.show_drill_manager()
