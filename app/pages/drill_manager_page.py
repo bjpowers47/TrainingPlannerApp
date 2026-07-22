@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from app.models.player_development import get_phase_by_id
-from app.constants.player_development import DEVELOPMENT_PHASES
+from app.models.player_development import DEVELOPMENT_PHASES
 
 class DrillManagerPage(ctk.CTkFrame):
 

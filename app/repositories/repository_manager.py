@@ -10,6 +10,9 @@ Purpose:
 """
 
 from app.repositories.drill_repository import DrillRepository
+from app.repositories.technical_focus_repository import (
+    TechnicalFocusRepository,
+)
 
 
 class RepositoryManager:
@@ -17,3 +20,4 @@ class RepositoryManager:
 
     def __init__(self):
         self.drills = DrillRepository()
+        self.technical_focuses = TechnicalFocusRepository()

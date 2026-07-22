@@ -10,7 +10,7 @@ Purpose:
 """
 
 import customtkinter as ctk
-from app.constants.player_development import DEVELOPMENT_PHASES
+from app.models.player_development import DEVELOPMENT_PHASES
 
 
 class DevelopmentLibraryPage(ctk.CTkFrame):

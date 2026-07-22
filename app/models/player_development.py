@@ -9,6 +9,8 @@ class DevelopmentPhase:
     name: str
     icon: str
     description: str
+
+
 DEVELOPMENT_PHASES = [
     DevelopmentPhase(
         1,
@@ -47,32 +49,44 @@ DEVELOPMENT_PHASES = [
         "Combine all skills into realistic game situations.",
     ),
 ]
+
 def get_phase_names() -> list[str]:
-    """Return the names of all development phases."""
     return [phase.name for phase in DEVELOPMENT_PHASES]
 
 
 def get_phase_by_id(phase_id: int) -> DevelopmentPhase:
-    """Return a development phase by its ID."""
     for phase in DEVELOPMENT_PHASES:
         if phase.id == phase_id:
             return phase
-    raise ValueError(f"Unknown development phase ID: {phase_id}")
+
+    raise ValueError(
+        f"Unknown development phase ID: {phase_id}"
+    )
 
 
-def get_phase_by_name(name: str):
-    """Return a DevelopmentPhase by its display name."""
-    print(f"get_phase_by_name() called with: {name}")
-    # Remove the icon if present
-    clean_name = name.replace("⚽ ", "").replace("🎯 ", "").strip()
-    print(f"Cleaned name: {clean_name}")
+def get_phase_by_name(name: str) -> DevelopmentPhase | None:
+    """Find a development phase by its plain or display name."""
+
+    clean_name = name.strip()
+
     for phase in DEVELOPMENT_PHASES:
-        if phase.name == clean_name:
+        display_name = f"{phase.icon} {phase.name}"
+
+        if clean_name.casefold() in {
+            phase.name.casefold(),
+            display_name.casefold(),
+        }:
             return phase
 
     return None
 
+
 def get_display_name(name: str) -> str:
-    """Return the icon and name for display in the UI."""
+    """Return the icon and name used by the user interface."""
+
     phase = get_phase_by_name(name)
+
+    if phase is None:
+        raise ValueError(f"Unknown development phase: {name}")
+
     return f"{phase.icon} {phase.name}"

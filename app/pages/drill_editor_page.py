@@ -1,9 +1,12 @@
 print("Loaded drill_editor_page.py")
+
 import customtkinter as ctk
 
-from app.constants.player_development import DEVELOPMENT_PHASES
-
-
+from app.models.player_development import DEVELOPMENT_PHASES
+from app.services.coaching_library import (
+    get_coaching_focus_id_by_name,
+    get_coaching_focus_names_by_phase,
+)
 class DrillEditorPage(ctk.CTkFrame):
     """Page used to create or edit a drill."""
 
@@ -88,15 +91,20 @@ class DrillEditorPage(ctk.CTkFrame):
 
         self._add_label("Development Phase", row=2, column=0)
 
-        phase_names = [
-            f"{phase.icon} {phase.name}"
+        self.phase_prompt = "Select Development Phase"
+
+        self.phase_lookup = {
+            f"{phase.icon} {phase.name}": phase
             for phase in DEVELOPMENT_PHASES
-        ]
+        }
+
+        phase_names = list(self.phase_lookup.keys())
 
         self.phase_menu = ctk.CTkOptionMenu(
             self.form,
             values=phase_names,
             height=38,
+            command=self._phase_changed,
         )
         self.phase_menu.grid(
             row=3,
@@ -106,7 +114,10 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(0, 18),
         )
 
-        self._add_label("Technical Focus", row=2, column=1)
+        # Display the prompt without making it a selectable menu item.
+        self.phase_menu.set(self.phase_prompt)
+
+
 
         self.focus_menu = ctk.CTkOptionMenu(
             self.form,
@@ -228,14 +239,66 @@ class DrillEditorPage(ctk.CTkFrame):
             padx=15,
             pady=(8, 6),
         )
+    def _phase_changed(self, selected_phase_name):
+        """
+        Load the Coaching Focuses for the selected Development Phase.
+        """
+
+        selected_phase = self.phase_lookup.get(selected_phase_name)
+
+        if selected_phase is None:
+            self.focus_menu.configure(
+                values=[self.focus_prompt]
+            )
+            self.focus_menu.set(self.focus_prompt)
+            return
+
+        focus_names = get_coaching_focus_names_by_phase(
+            selected_phase.id
+        )
+
+        menu_values = [
+            "Not selected",
+            *focus_names,
+        ]
+
+        self.focus_menu.configure(values=menu_values)
+        self.focus_menu.set("Not selected")
 
     def _save(self):
-        """Temporarily display the entered values in the console."""
+        """Collect the drill values and send them to the save callback."""
+
+        selected_phase_name = self.phase_menu.get()
+        selected_phase = self.phase_lookup.get(selected_phase_name)
+
+        selected_focus_name = self.focus_menu.get()
+
+        development_block_id = None
+        technical_focus_id = None
+
+        if selected_phase is not None:
+            development_block_id = selected_phase.id
+
+            if selected_focus_name != "Not selected":
+                technical_focus_id = get_coaching_focus_id_by_name(
+                    name=selected_focus_name,
+                    development_phase_id=development_block_id,
+                )
 
         drill_data = {
             "name": self.name_entry.get().strip(),
-            "development_phase": self.phase_menu.get(),
-            "technical_focus": self.focus_menu.get(),
+            "development_block_id": development_block_id,
+            "technical_focus_id": technical_focus_id,
+            "development_phase": (
+                selected_phase.name
+                if selected_phase is not None
+                else ""
+            ),
+            "technical_focus": (
+                selected_focus_name
+                if selected_focus_name != "Not selected"
+                else ""
+            ),
             "purpose": self.purpose_textbox.get(
                 "1.0",
                 "end",

@@ -13,7 +13,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from app.models.drill import Drill
-from app.constants.player_development import get_phase_names
+from app.models.player_development import get_phase_names
 
 
 @dataclass

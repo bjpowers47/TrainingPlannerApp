@@ -11,8 +11,8 @@ Purpose:
 
 import customtkinter as ctk
 from app.constants.development_phases import DEVELOPMENT_PHASES
-from app.constants.player_development import DEVELOPMENT_PHASES
-from app.constants.player_development import get_display_name
+from app.models.player_development import DEVELOPMENT_PHASES
+from app.models.player_development import get_display_name
 
 class PracticeBuilderPage(ctk.CTkFrame):
     """Early Practice Builder page."""

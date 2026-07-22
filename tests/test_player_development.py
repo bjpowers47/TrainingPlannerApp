@@ -4,7 +4,7 @@ Unit tests for player_development.py
 
 import unittest
 
-from app.constants.player_development import (
+from app.models.player_development import (
     DEVELOPMENT_PHASES,
     get_display_name,
     get_phase_by_id,
