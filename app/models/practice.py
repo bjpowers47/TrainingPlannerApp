@@ -21,13 +21,16 @@ class Practice:
     """Represents a single practice."""
 
     name: str = "Untitled Practice"
+    practice_date: str = ""
+    team_name: str = ""
+    objective: str = ""
 
-    activities: dict = field(
+    activities: dict[str, list[Drill]] = field(
         default_factory=lambda: {
             phase_name: []
             for phase_name in get_phase_names()
-    }
-)
+        }
+    )
     
 
     def add_activity(self, phase: str, activity) -> None:
@@ -83,6 +86,9 @@ class Practice:
 
         practice_data = {
             "name": self.name,
+            "practice_date": self.practice_date,
+            "team_name": self.team_name,
+            "objective": self.objective,
             "activities": {},
         }
 
@@ -119,7 +125,19 @@ class Practice:
             name=practice_data.get(
                 "name",
                 "Untitled Practice",
-            )
+            ),
+            practice_date=practice_data.get(
+                "practice_date",
+                "",
+            ),
+            team_name=practice_data.get(
+                "team_name",
+                "",
+            ),
+            objective=practice_data.get(
+                "objective",
+                "",
+            ),
         )
 
         saved_activities = practice_data.get(

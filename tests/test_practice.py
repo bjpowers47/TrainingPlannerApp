@@ -89,3 +89,39 @@ def test_practice():
 
 if __name__ == "__main__":
     test_practice()
+"""Tests for the Practice domain model."""
+
+import tempfile
+from pathlib import Path
+
+from app.models.practice import Practice
+
+
+def test_practice_information_is_saved_and_loaded():
+    """Practice information should survive a JSON round trip."""
+
+    practice = Practice(
+        name="Tuesday Training",
+        practice_date="2026-07-28",
+        team_name="U12 Boys",
+        objective="Improve first touch under pressure.",
+    )
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        filename = Path(temporary_directory) / "practice.json"
+
+        practice.save_to_json(str(filename))
+        restored_practice = Practice.load_from_json(str(filename))
+
+    assert restored_practice.name == "Tuesday Training"
+    assert restored_practice.practice_date == "2026-07-28"
+    assert restored_practice.team_name == "U12 Boys"
+    assert (
+        restored_practice.objective
+        == "Improve first touch under pressure."
+    )
+
+
+if __name__ == "__main__":
+    test_practice_information_is_saved_and_loaded()
+    print("Practice tests passed.")

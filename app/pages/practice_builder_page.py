@@ -10,8 +10,10 @@ Purpose:
 """
 
 import customtkinter as ctk
-from app.constants.development_phases import DEVELOPMENT_PHASES
-from app.models.player_development import DEVELOPMENT_PHASES
+from app.models.player_development import (
+    DEVELOPMENT_PHASES,
+    get_display_name,
+)
 from app.models.player_development import get_display_name
 
 class PracticeBuilderPage(ctk.CTkFrame):
@@ -36,7 +38,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
         """Create the Practice Builder interface."""
 
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(4, weight=1)
 
         title = ctk.CTkLabel(
             self,
@@ -50,6 +52,116 @@ class PracticeBuilderPage(ctk.CTkFrame):
             padx=20,
             pady=15,
         )
+        info_frame = ctk.CTkFrame(self)
+        info_frame.grid(
+            row=1,
+            column=0,
+            sticky="ew",
+            padx=20,
+            pady=(0, 10),
+        )
+
+        info_frame.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            info_frame,
+            text="Practice Name:",
+        ).grid(
+            row=0,
+            column=0,
+            sticky="w",
+            padx=10,
+            pady=8,
+        )
+
+        self.name_entry = ctk.CTkEntry(info_frame)
+
+        self.name_entry.grid(
+            row=0,
+            column=1,
+            sticky="ew",
+            padx=10,
+        )
+
+        self.name_entry.insert(
+            0,
+            self.practice.name,
+        )
+        ctk.CTkLabel(
+            info_frame,
+            text="Practice Date:",
+        ).grid(
+            row=1,
+            column=0,
+            sticky="w",
+            padx=10,
+            pady=8,
+        )
+
+        self.date_entry = ctk.CTkEntry(info_frame)
+
+        self.date_entry.grid(
+            row=1,
+            column=1,
+            sticky="ew",
+            padx=10,
+        )
+
+        self.date_entry.insert(
+            0,
+            self.practice.practice_date,
+        )
+        ctk.CTkLabel(
+            info_frame,
+            text="Team:",
+        ).grid(
+            row=2,
+            column=0,
+            sticky="w",
+            padx=10,
+            pady=8,
+        )
+
+        self.team_entry = ctk.CTkEntry(info_frame)
+
+        self.team_entry.grid(
+            row=2,
+            column=1,
+            sticky="ew",
+            padx=10,
+        )
+
+        self.team_entry.insert(
+            0,
+            self.practice.team_name,
+        )
+        ctk.CTkLabel(
+            info_frame,
+            text="Objective:",
+        ).grid(
+            row=3,
+            column=0,
+            sticky="nw",
+            padx=10,
+            pady=8,
+        )
+
+        self.objective_text = ctk.CTkTextbox(
+            info_frame,
+            height=90,
+        )
+
+        self.objective_text.grid(
+            row=3,
+            column=1,
+            sticky="ew",
+            padx=10,
+            pady=8,
+        )
+
+        self.objective_text.insert(
+            "1.0",
+            self.practice.objective,
+        )
 
         self.summary_label = ctk.CTkLabel(
             self,
@@ -57,7 +169,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             font=("Segoe UI", 18, "bold"),
         )
         self.summary_label.grid(
-            row=1,
+            row=2,
             column=0,
             sticky="w",
             padx=20,
@@ -70,7 +182,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             font=("Segoe UI", 14),
         )
         self.summary_text.grid(
-            row=2,
+            row=3,
             column=0,
             sticky="w",
             padx=30,
@@ -79,7 +191,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         self.phase_frame = ctk.CTkScrollableFrame(self)
         self.phase_frame.grid(
-            row=3,
+            row=4,
             column=0,
             sticky="nsew",
             padx=20,
@@ -226,6 +338,8 @@ class PracticeBuilderPage(ctk.CTkFrame):
     def browse_library(self, phase):
         """Open the Development Library for the selected phase."""
 
+        self.update_practice_information()
+
         self.open_library_callback(phase)
     def remove_activity(self, phase, activity):
         """Remove an activity and refresh the Practice Builder."""
@@ -240,11 +354,13 @@ class PracticeBuilderPage(ctk.CTkFrame):
     def refresh_page(self):
         """Rebuild the page from the current Practice model."""
 
+        self.update_practice_information()
+
         for widget in self.winfo_children():
             widget.destroy()
 
         self.build_ui()
-        self.refresh_summary() 
+        self.refresh_summary()
     def move_activity_up(self, phase, activity):
         """Move an activity one position earlier within its phase."""
 
@@ -285,3 +401,22 @@ class PracticeBuilderPage(ctk.CTkFrame):
         )
 
         self.refresh_page()
+    def update_practice_information(self):
+        """Copy the Practice Information controls into the Practice model."""
+
+        self.practice.name = self.name_entry.get().strip()
+
+        self.practice.practice_date = (
+            self.date_entry.get().strip()
+        )
+
+        self.practice.team_name = (
+            self.team_entry.get().strip()
+        )
+
+        self.practice.objective = (
+            self.objective_text.get(
+                "1.0",
+                "end",
+            ).strip()
+        )

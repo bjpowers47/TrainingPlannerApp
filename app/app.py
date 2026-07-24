@@ -203,14 +203,19 @@ class SoccerTrainingManager(ctk.CTk):
     def show_practice_builder(self):
         self.clear_content()
 
-        page = PracticeBuilderPage(
+        self.practice_builder_page = PracticeBuilderPage(
             self.content,
             self.current_practice,
             self.show_development_library_for_phase,
         )
-        page.pack(fill="both", expand=True)
-        page.lift()
-        page.focus_set()
+
+        self.practice_builder_page.pack(
+            fill="both",
+            expand=True,
+        )
+
+        self.practice_builder_page.lift()
+        self.practice_builder_page.focus_set()
 
     def show_development_library_for_phase(self, phase):
         """Open the library for a selected development phase."""
@@ -263,14 +268,52 @@ class SoccerTrainingManager(ctk.CTk):
         )
 
         self.show_practice_builder()
+
+    def show_practice_builder(self):
+        self.clear_content()
+
+        self.practice_builder_page = PracticeBuilderPage(
+            self.content,
+            self.current_practice,
+            self.show_development_library_for_phase,
+        )
+
+        self.practice_builder_page.pack(
+            fill="both",
+            expand=True,
+        )
+
+        self.practice_builder_page.lift()
+        self.practice_builder_page.focus_set()
+
+    def open_practice(self):
+        """Open a previously saved practice."""
+
+        filename = filedialog.askopenfilename(
+            title="Open Practice",
+            filetypes=[
+                ("JSON Files", "*.json"),
+                ("All Files", "*.*"),
+            ],
+        )
+
+        if not filename:
+            return
+
+        self.current_practice = Practice.load_from_json(filename)
+        self.show_practice_builder()
+
     def new_practice(self):
         """Start a brand-new practice."""
 
         self.current_practice = Practice()
-
         self.show_practice_builder()
+
     def save_practice(self):
         """Save the current practice."""
+
+        if hasattr(self, "practice_builder_page"):
+            self.practice_builder_page.update_practice_information()
 
         filename = filedialog.asksaveasfilename(
             title="Save Practice",
