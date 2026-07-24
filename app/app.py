@@ -306,14 +306,17 @@ class SoccerTrainingManager(ctk.CTk):
             self.content,
             self.development_library_service,
             on_new_drill=self.show_drill_editor,
+            on_edit_drill=self.show_drill_editor,
         )
 
         page.pack(fill="both", expand=True)
-    def show_drill_editor(self):
+
+    def show_drill_editor(self, drill=None):
         self.clear_content()
 
         page = DrillEditorPage(
             self.content,
+            drill=drill,
             on_save=self.handle_drill_editor_save,
             on_cancel=self.show_drill_manager,
         )
