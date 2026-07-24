@@ -323,13 +323,9 @@ class SoccerTrainingManager(ctk.CTk):
 
         page.pack(fill="both", expand=True)
     def handle_drill_editor_save(self, data):
-        """Create and save a drill from the editor form."""
+        """Create a new drill or update an existing drill."""
 
         existing_drills = self.repositories.drills.get_all()
-        next_id = max(
-            (drill.id for drill in existing_drills),
-            default=0,
-        ) + 1
 
         phase = get_phase_by_name(data["development_phase"])
 
@@ -338,21 +334,74 @@ class SoccerTrainingManager(ctk.CTk):
                 f"Unknown development phase: {data['development_phase']}"
             )
 
-        drill = Drill(
-            id=next_id,
-            name=data["name"].strip(),
-            development_block_id=phase.id,
-            technical_focus_id=None,
-            purpose=data["purpose"].strip(),
-            duration_minutes=int(data["duration_minutes"] or 0),
-            recommended_players=data["recommended_players"].strip(),
-        )
+        drill_id = data.get("id")
+
+        if drill_id is not None:
+            #
+            # Edit an existing drill
+            #
+            drill = next(
+                (
+                    existing_drill
+                    for existing_drill in existing_drills
+                    if existing_drill.id == drill_id
+                ),
+                None,
+            )
+
+            if drill is None:
+                raise ValueError(
+                    f"Unable to find drill with ID {drill_id}."
+                )
+
+            drill.name = data["name"].strip()
+            drill.development_block_id = phase.id
+            drill.technical_focus_id = data.get(
+                "technical_focus_id"
+            )
+            drill.purpose = data["purpose"].strip()
+            drill.duration_minutes = int(
+                data["duration_minutes"] or 0
+            )
+            drill.recommended_players = data[
+                "recommended_players"
+            ].strip()
+
+            action = "Updated"
+
+        else:
+            #
+            # Create a new drill
+            #
+            next_id = max(
+                (drill.id for drill in existing_drills),
+                default=0,
+            ) + 1
+
+            drill = Drill(
+                id=next_id,
+                name=data["name"].strip(),
+                development_block_id=phase.id,
+                technical_focus_id=data.get(
+                    "technical_focus_id"
+                ),
+                purpose=data["purpose"].strip(),
+                duration_minutes=int(
+                    data["duration_minutes"] or 0
+                ),
+                recommended_players=data[
+                    "recommended_players"
+                ].strip(),
+            )
+
+            action = "Created"
 
         self.repositories.drills.save(drill)
 
         print(
-            f"Saved drill: {drill.name} "
-            f"(ID {drill.id}, phase ID {drill.development_block_id})"
+            f"{action} drill: {drill.name} "
+            f"(ID {drill.id}, "
+            f"phase ID {drill.development_block_id})"
         )
 
         self.show_drill_manager()

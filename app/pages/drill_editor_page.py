@@ -400,9 +400,13 @@ class DrillEditorPage(ctk.CTkFrame):
             "duration_minutes": self.duration_entry.get().strip(),
             "recommended_players": self.players_entry.get().strip(),
         }
+        if self.drill is not None:
+            drill_data["id"] = self.drill.id
 
         print("Drill editor values:")
         print(drill_data)
+        if self.drill is not None:
+            drill_data["id"] = self.drill.id
 
         if self.on_save:
             self.on_save(drill_data)
