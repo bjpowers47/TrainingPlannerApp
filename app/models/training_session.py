@@ -16,3 +16,4 @@ class TrainingSession:
         while len(self.values) <= column:
             self.values.append("")
         self.values[column] = value
+        
