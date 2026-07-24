@@ -12,7 +12,6 @@ Purpose:
 import customtkinter as ctk
 from app.models.player_development import DEVELOPMENT_PHASES
 
-
 class DevelopmentLibraryPage(ctk.CTkFrame):
     """Development Library page."""
 
@@ -31,6 +30,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
 
         self.selected_block_id = None
         self.selected_drill_ids = set()
+        self.current_drill = None
 
         self.build_ui()
         self.load_blocks()
@@ -177,17 +177,13 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         for phase in DEVELOPMENT_PHASES:
             button = ctk.CTkButton(
                 self.blocks_frame,
-                text=f"{phase.icon} {phase.name}",
-                command=lambda p=phase: self.show_drills(p),
+                text=phase.name,
+                command=lambda selected_phase=phase: self.show_drills(selected_phase),
             )
-            button.pack(
-                fill="x",
-                padx=10,
-                pady=6,
-            )
+            button.pack(fill="x", padx=5, pady=5)
+
     def show_drills(self, phase):
         """Display drills for the selected Practice Phase."""
-
         self.selected_phase = phase.name
         self.selected_block_id = phase.id
 
@@ -234,10 +230,9 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             button = ctk.CTkButton(
                 row,
                 text=drill.name,
-                command=lambda selected_drill=drill: (
-                    self.show_drill_details(selected_drill)
-                ),
+                command=lambda d=drill: self.show_drill_details(d),
             )
+
             button.pack(
                 side="left",
                 fill="x",
@@ -257,7 +252,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         """Display the selected drill's information."""
 
         self.details_box.delete("1.0", "end")
-
         self.details_box.insert("end", f"{drill.name}\n")
         self.details_box.insert(
             "end",
@@ -314,7 +308,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
                 "end",
                 drill.notes,
             )
-
     def submit_selected_drills(self):
         """Add selected drills to the current practice."""
 
@@ -348,11 +341,3 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             self.selected_phase,
             selected_drills,
         )
-        def select_phase(self, phase_name: str, block_id: int) -> None:
-            """Select a development phase and display its drills."""
-
-            self.selected_phase = phase_name
-            self.selected_drill_ids.clear()
-
-            self.load_drills(block_id)
-            self.show_phase_instructions(phase_name)

@@ -27,7 +27,7 @@ DEVELOPMENT_PHASES = [
     DevelopmentPhase(
         3,
         "1v1 Moves",
-        "🛡️",
+        "🕺",
         "Develop the ability to beat an opponent in individual situations.",
     ),
     DevelopmentPhase(

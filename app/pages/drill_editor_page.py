@@ -1,9 +1,12 @@
-print("Loaded drill_editor_page.py")
-
 import customtkinter as ctk
 
 from app.models.player_development import DEVELOPMENT_PHASES
 from app.services.coaching_library import (
+    get_coaching_focus_id_by_name,
+    get_coaching_focus_names_by_phase,
+)
+from app.services.coaching_library import (
+    get_coaching_focus_by_id,
     get_coaching_focus_id_by_name,
     get_coaching_focus_names_by_phase,
 )
@@ -13,11 +16,12 @@ class DrillEditorPage(ctk.CTkFrame):
     def __init__(
         self,
         master,
+        drill=None,
         on_save=None,
         on_cancel=None,
     ):
         super().__init__(master)
-
+        self.drill = drill
         self.on_save = on_save
         self.on_cancel = on_cancel
 
@@ -27,6 +31,10 @@ class DrillEditorPage(ctk.CTkFrame):
         self._build_header()
         self._build_form()
         self._build_buttons()
+
+        if self.drill is not None:
+            self._load_drill()
+
     def _build_header(self):
         header = ctk.CTkFrame(
             self,
@@ -40,12 +48,19 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(25, 10),
         )
 
+        title_text = (
+            "Edit Drill"
+            if self.drill
+            else "New Drill"
+        )
+
         title = ctk.CTkLabel(
             header,
-            text="New Drill",
+            text=title_text,
             font=("Segoe UI", 28, "bold"),
             anchor="w",
         )
+
         title.pack(fill="x")
 
         subtitle = ctk.CTkLabel(
@@ -55,6 +70,7 @@ class DrillEditorPage(ctk.CTkFrame):
             text_color="gray",
             anchor="w",
         )
+
         subtitle.pack(
             fill="x",
             pady=(4, 0),
@@ -117,13 +133,24 @@ class DrillEditorPage(ctk.CTkFrame):
         # Display the prompt without making it a selectable menu item.
         self.phase_menu.set(self.phase_prompt)
 
+        #
+        # Coaching Focus
+        #
 
+        self._add_label(
+            "Coaching Focus",
+            row=2,
+            column=1,
+        )
+
+        self.focus_prompt = "Select Development Phase First"
 
         self.focus_menu = ctk.CTkOptionMenu(
             self.form,
-            values=["Not selected"],
+            values=[self.focus_prompt],
             height=38,
         )
+
         self.focus_menu.grid(
             row=3,
             column=1,
@@ -132,6 +159,7 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(0, 18),
         )
 
+        self.focus_menu.set(self.focus_prompt)
         self._add_label("Purpose", row=4, column=0)
 
         purpose_help = ctk.CTkLabel(
@@ -264,6 +292,72 @@ class DrillEditorPage(ctk.CTkFrame):
 
         self.focus_menu.configure(values=menu_values)
         self.focus_menu.set("Not selected")
+
+    def _load_drill(self):
+        """Populate the editor from an existing drill."""
+
+        #
+        # Drill Name
+        #
+        self.name_entry.delete(0, "end")
+        self.name_entry.insert(0, self.drill.name)
+
+        #
+        # Development Phase
+        #
+        selected_phase_name = None
+
+        for menu_name, phase in self.phase_lookup.items():
+            if phase.id == self.drill.development_block_id:
+                selected_phase_name = menu_name
+                break
+
+        if selected_phase_name is not None:
+            self.phase_menu.set(selected_phase_name)
+
+            #
+            # Populate the Coaching Focus list
+            #
+            self._phase_changed(selected_phase_name)
+
+        #
+        # Coaching Focus
+        #
+        if self.drill.technical_focus_id:
+
+            focus = get_coaching_focus_by_id(
+                self.drill.technical_focus_id
+            )
+
+            if focus:
+                self.focus_menu.set(focus.name)
+
+        #
+        # Purpose
+        #
+        self.purpose_textbox.delete("1.0", "end")
+        self.purpose_textbox.insert(
+            "1.0",
+            self.drill.purpose,
+        )
+
+        #
+        # Duration
+        #
+        self.duration_entry.delete(0, "end")
+        self.duration_entry.insert(
+            0,
+            str(self.drill.duration_minutes),
+        )
+
+        #
+        # Recommended Players
+        #
+        self.players_entry.delete(0, "end")
+        self.players_entry.insert(
+            0,
+            str(self.drill.recommended_players),
+        )
 
     def _save(self):
         """Collect the drill values and send them to the save callback."""

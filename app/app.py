@@ -51,7 +51,7 @@ class SoccerTrainingManager(ctk.CTk):
         title = ctk.CTkLabel(
             self.sidebar,
             text="⚽ Soccer Training Manager",
-            font=("Segoe UI", 22, "bold")
+            font=("Segoe UI", 18, "bold")
         )
         title.pack(pady=20)
 
