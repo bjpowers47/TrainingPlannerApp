@@ -328,12 +328,24 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         activity_count = self.practice.activity_count()
         total_minutes = self.practice.total_duration()
+        phase_counts = self.practice.activity_count_by_phase()
+
+        summary_lines = [
+            f"Total Activities: {activity_count}",
+            f"Estimated Time: {total_minutes} minutes",
+            "",
+        ]
+
+        for phase in self.practice.get_phase_names():
+            display_name = get_display_name(phase)
+            count = phase_counts[phase]
+
+            summary_lines.append(
+                f"{display_name}: {count}"
+            )
 
         self.summary_text.configure(
-            text=(
-                f"Activities: {activity_count}\n"
-                f"Estimated Time: {total_minutes} minutes"
-            )
+            text="\n".join(summary_lines)
         )
     def browse_library(self, phase):
         """Open the Development Library for the selected phase."""

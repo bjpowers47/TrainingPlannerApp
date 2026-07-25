@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from app.models.drill import Drill
 from app.models.player_development import get_phase_names
+from app.models.practice_activity import PracticeActivity
 
 
 @dataclass
@@ -33,17 +34,32 @@ class Practice:
     )
     
 
-    def add_activity(self, phase: str, activity) -> None:
-        """Add an activity to a practice phase."""
+    def add_activity(self, phase: str, drill: Drill) -> None:
+        """Add a drill to a practice phase."""
 
-        self.activities[phase].append(activity)
+        activity = PracticeActivity(
+            drill=drill,
+        )
 
-    def remove_activity(self, phase: str, activity) -> None:
-        """Remove an activity from a practice phase."""
+        self.activities[phase].append(
+            activity
+        )
+    def remove_activity(
+        self,
+        phase: str,
+        activity_or_drill,
+    ) -> None:
+        """Remove an activity or drill from a practice phase."""
 
-        if activity in self.activities[phase]:
-            self.activities[phase].remove(activity)
+        activities = self.activities.get(phase, [])
 
+        for activity in activities:
+            if (
+                activity == activity_or_drill
+                or activity.drill == activity_or_drill
+            ):
+                activities.remove(activity)
+                return
     def get_activities(self, phase: str):
         """Return all activities for a phase."""
 
@@ -67,6 +83,14 @@ class Practice:
             total += len(activities)
 
         return total
+
+    def activity_count_by_phase(self) -> dict[str, int]:
+        """Return the number of activities in each practice phase."""
+
+        return {
+            phase: len(self.activities.get(phase, []))
+            for phase in self.get_phase_names()
+        }
 
     def total_duration(self) -> int:
         """Return the total estimated practice duration in minutes."""
@@ -145,16 +169,49 @@ class Practice:
             {},
         )
 
-        for phase in practice.get_phase_names():
-            phase_activities = saved_activities.get(
-                phase,
-                [],
-            )
+        for phase, phase_activities in saved_activities.items():
+
+            if phase not in practice.activities:
+                practice.activities[phase] = []
 
             for activity_data in phase_activities:
-                practice.add_activity(
-                    phase,
-                    Drill(**activity_data),
+
+                if "drill" in activity_data:
+                    # Current PracticeActivity format.
+                    drill = Drill(
+                        **activity_data["drill"]
+                    )
+
+                    activity = PracticeActivity(
+                        drill=drill,
+                        duration_override=activity_data.get(
+                            "duration_override"
+                        ),
+                        repetitions=activity_data.get(
+                            "repetitions",
+                            1,
+                        ),
+                        rest_seconds=activity_data.get(
+                            "rest_seconds",
+                            30,
+                        ),
+                        coach_notes=activity_data.get(
+                            "coach_notes",
+                            "",
+                        ),
+                    )
+
+                else:
+                    # Compatibility with older files that stored
+                    # Drill dictionaries directly.
+                    drill = Drill(**activity_data)
+
+                    activity = PracticeActivity(
+                        drill=drill,
+                    )
+
+                practice.activities[phase].append(
+                    activity
                 )
 
         return practice

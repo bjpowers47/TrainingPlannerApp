@@ -120,8 +120,51 @@ def test_practice_information_is_saved_and_loaded():
         restored_practice.objective
         == "Improve first touch under pressure."
     )
+def test_practice_activity_is_saved_and_loaded():
+    """A PracticeActivity should survive a JSON round trip."""
 
+    drill = Drill(
+        id=1,
+        name="Ball Taps",
+        development_block_id=1,
+        technical_focus_id=None,
+        purpose="Control",
+        duration_minutes=10,
+        recommended_players="1+",
+    )
+
+    practice = Practice()
+    phase = practice.get_phase_names()[0]
+
+    practice.add_activity(
+        phase,
+        drill,
+    )
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        filename = (
+            Path(temporary_directory)
+            / "practice.json"
+        )
+
+        practice.save_to_json(filename)
+
+        loaded_practice = Practice.load_from_json(
+            filename
+        )
+
+    loaded_activity = loaded_practice.get_activities(
+        phase
+    )[0]
+
+    assert loaded_activity.name == "Ball Taps"
+    assert loaded_activity.duration_minutes == 10
+    assert loaded_activity.repetitions == 1
+    assert loaded_activity.rest_seconds == 30
 
 if __name__ == "__main__":
+    test_practice()
     test_practice_information_is_saved_and_loaded()
-    print("Practice tests passed.")
+    test_practice_activity_is_saved_and_loaded()
+
+    print("All Practice tests passed.")
