@@ -11,6 +11,7 @@ Purpose:
 
 from dataclasses import dataclass
 
+from app.models import drill
 from app.models.drill import Drill
 
 
@@ -42,3 +43,18 @@ class PracticeActivity:
         """Return the drill name."""
 
         return self.drill.name
+    def set_duration(
+    self,
+    minutes: int,
+    ) -> None:
+        """Override the drill duration."""
+
+        self.duration_override = minutes
+
+        activity = PracticeActivity(drill)
+
+        assert activity.duration_minutes == 10
+
+        activity.set_duration(8)
+
+        assert activity.duration_minutes == 8
