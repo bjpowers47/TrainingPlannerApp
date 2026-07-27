@@ -322,7 +322,35 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 padx=25,
                 pady=(8, 12),
             )
-            
+    def load_practice_information(self):
+        """Display the current Practice model values in the controls."""
+
+        self.name_entry.delete(0, "end")
+        self.name_entry.insert(
+            0,
+            self.practice.name,
+        )
+
+        self.date_entry.delete(0, "end")
+        self.date_entry.insert(
+            0,
+            self.practice.practice_date,
+        )
+
+        self.team_entry.delete(0, "end")
+        self.team_entry.insert(
+            0,
+            self.practice.team_name,
+        )
+
+        self.objective_text.delete(
+            "1.0",
+            "end",
+        )
+        self.objective_text.insert(
+            "1.0",
+            self.practice.objective,
+        )       
     def refresh_summary(self):
         """Update the Practice Summary."""
 
@@ -432,3 +460,4 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 "end",
             ).strip()
         )
+    

@@ -51,10 +51,4 @@ class PracticeActivity:
 
         self.duration_override = minutes
 
-        activity = PracticeActivity(drill)
-
-        assert activity.duration_minutes == 10
-
-        activity.set_duration(8)
-
-        assert activity.duration_minutes == 8
+       

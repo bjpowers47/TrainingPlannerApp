@@ -17,6 +17,9 @@ from app.pages.drill_editor_page import DrillEditorPage
 from app.models.drill import Drill
 
 class SoccerTrainingManager(ctk.CTk):
+# ==========================================================
+# Initialization
+# ==========================================================
 
     def __init__(self):
         super().__init__()
@@ -37,7 +40,6 @@ class SoccerTrainingManager(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.build_ui()
-
     def build_ui(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -126,10 +128,13 @@ class SoccerTrainingManager(ctk.CTk):
             padx=15,
             pady=6,
         )   
-
     def clear_content(self):
         for widget in self.content.winfo_children():
             widget.destroy()
+
+# ==========================================================
+# Navigation
+# ==========================================================
 
     def show_dashboard(self):
         self.clear_content()
@@ -150,7 +155,6 @@ class SoccerTrainingManager(ctk.CTk):
             "Version 0.2.1\n\n"
             "Load an Excel workbook to begin."
         )
-
     def show_training(self):
         self.clear_content()
 
@@ -176,20 +180,6 @@ class SoccerTrainingManager(ctk.CTk):
         self.status.configure(
             text=f"{len(sessions)} training sessions loaded"
         )
-
-    def load_workbook(self):
-        filename = filedialog.askopenfilename(
-            filetypes=[("Excel Workbook", "*.xlsx")]
-        )
-
-        if not filename:
-            return
-
-        self.workbook.open(filename)
-
-        self.status.configure(text=f"Loaded: {filename}")
-
-        self.show_training()
     def show_development_library(self):
         self.clear_content()
 
@@ -199,23 +189,29 @@ class SoccerTrainingManager(ctk.CTk):
         )
 
         page.pack(fill="both", expand=True)
-
     def show_practice_builder(self):
         self.clear_content()
-
         self.practice_builder_page = PracticeBuilderPage(
             self.content,
             self.current_practice,
             self.show_development_library_for_phase,
         )
-
         self.practice_builder_page.pack(
             fill="both",
             expand=True,
         )
 
+        self.practice_builder_page.pack( 
+            fill="both", 
+            expand=True, 
+        )
+
         self.practice_builder_page.lift()
         self.practice_builder_page.focus_set()
+
+# ==========================================================
+# Practice Management
+# ==========================================================
 
     def show_development_library_for_phase(self, phase):
         """Open the library for a selected development phase."""
@@ -238,7 +234,6 @@ class SoccerTrainingManager(ctk.CTk):
         page.pack(fill="both", expand=True)
 
         page.show_drills(selected_development_phase)
-    
     def add_drills_to_practice(self, phase, drills):
         """Add selected drills and return to the Practice Builder."""
 
@@ -249,9 +244,13 @@ class SoccerTrainingManager(ctk.CTk):
             )
 
         self.show_practice_builder()
+    def new_practice(self):
+        """Start a brand-new practice."""
+        print("NEW PRACTICE CALLED")
+        self.current_practice = Practice()
+        self.show_practice_builder()
     def open_practice(self):
         """Open a previously saved practice."""
-
         filename = filedialog.askopenfilename(
             title="Open Practice",
             filetypes=[
@@ -268,52 +267,27 @@ class SoccerTrainingManager(ctk.CTk):
         )
 
         self.show_practice_builder()
+    def save_practice(self):
+        """Save the current practice to a JSON file."""
 
-    def show_practice_builder(self):
-        self.clear_content()
-
-        self.practice_builder_page = PracticeBuilderPage(
-            self.content,
-            self.current_practice,
-            self.show_development_library_for_phase,
-        )
-
-        self.practice_builder_page.pack(
-            fill="both",
-            expand=True,
-        )
-
-        self.practice_builder_page.lift()
-        self.practice_builder_page.focus_set()
-
-    def open_practice(self):
-        """Open a previously saved practice."""
-
-        filename = filedialog.askopenfilename(
-            title="Open Practice",
-            filetypes=[
-                ("JSON Files", "*.json"),
-                ("All Files", "*.*"),
-            ],
-        )
-
-        if not filename:
+        if not hasattr(self, "practice_builder_page"):
             return
 
-        self.current_practice = Practice.load_from_json(filename)
-        self.show_practice_builder()
+        self.practice_builder_page.update_practice_information()
+        print(
+        "Same object:",
+        self.practice_builder_page.practice is self.current_practice
+        )
 
-    def new_practice(self):
-        """Start a brand-new practice."""
+        print(
+            "Page name:",
+            self.practice_builder_page.practice.name
+        )
 
-        self.current_practice = Practice()
-        self.show_practice_builder()
-
-    def save_practice(self):
-        """Save the current practice."""
-
-        if hasattr(self, "practice_builder_page"):
-            self.practice_builder_page.update_practice_information()
+        print(
+            "Current name:",
+            self.current_practice.name
+        )
 
         filename = filedialog.asksaveasfilename(
             title="Save Practice",
@@ -328,6 +302,11 @@ class SoccerTrainingManager(ctk.CTk):
             return
 
         self.current_practice.save_to_json(filename)
+
+# ==========================================================
+# Administration
+# ==========================================================
+
     def show_administration(self):
         """Display the Administration dashboard."""
 
@@ -353,7 +332,6 @@ class SoccerTrainingManager(ctk.CTk):
         )
 
         page.pack(fill="both", expand=True)
-
     def show_drill_editor(self, drill=None):
         self.clear_content()
 
@@ -448,3 +426,21 @@ class SoccerTrainingManager(ctk.CTk):
         )
 
         self.show_drill_manager()
+
+# ==========================================================
+# Workbook
+# ==========================================================
+
+    def load_workbook(self):
+        filename = filedialog.askopenfilename(
+            filetypes=[("Excel Workbook", "*.xlsx")]
+        )
+
+        if not filename:
+            return
+
+        self.workbook.open(filename)
+
+        self.status.configure(text=f"Loaded: {filename}")
+
+        self.show_training()
