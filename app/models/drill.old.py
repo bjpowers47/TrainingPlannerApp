@@ -24,16 +24,6 @@ class Drill:
     purpose: str = ""
     duration_minutes: int = 0
     recommended_players: str = ""
-
-    # Optional drill execution details.
-    # Time is still used for practice planning. These fields describe
-    # how the coach intends to run the drill.
-    use_execution_details: bool = False
-    sets: int | None = None
-    reps: int | None = None
-    work_seconds: int | None = None
-    rest_seconds: int | None = None
-
     equipment: List[str] = field(default_factory=list)
     coaching_points: List[str] = field(default_factory=list)
     progressions: List[str] = field(default_factory=list)

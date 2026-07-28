@@ -9,8 +9,6 @@ Purpose:
     Displays the Development Library for browsing and selecting drills.
 """
 
-from cmath import phase
-
 import customtkinter as ctk
 from app.models.player_development import DEVELOPMENT_PHASES
 
@@ -37,7 +35,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             selected_phase is not None
             and add_to_practice_callback is not None
         )
-        print(self.practice_builder_mode)
 
         self.build_ui()
         self.load_blocks()
@@ -52,52 +49,10 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         self.grid_columnconfigure(2, weight=2)
         self.grid_rowconfigure(1, weight=1)
 
-        self.page_title = ctk.CTkLabel(
-            self,
-            text="Development Library",
-            font=("Segoe UI", 28, "bold"),
-        )
-        self.page_title.grid(
-            row=0,
-            column=0,
-            columnspan=2,
-            sticky="w",
-            padx=20,
-            pady=15,
-        )
-
-        details_title = ctk.CTkLabel(
-            self,
-            text="Drill Details",
-            font=("Segoe UI", 18, "bold"),
-        )
-        details_title.grid(
-            row=0,
-            column=2,
-            sticky="w",
-            padx=20,
-        )
-
-        self.blocks_frame = ctk.CTkFrame(
-            self,
-            width=220,
-        )
-        self.blocks_frame.grid(
-            row=1,
-            column=0,
-            sticky="nsw",
-            padx=10,
-            pady=10,
-        )
-
-        self.drills_container = ctk.CTkFrame(self)
-        self.drills_container.grid(
-            row=1,
-            column=1,
-            sticky="nsew",
-            padx=10,
-            pady=10,
-        )
+        self.build_titles()
+        self.build_frames()
+        self.build_drill_list()
+        
         self.drills_container.grid_columnconfigure(0, weight=1)
         self.drills_container.grid_rowconfigure(1, weight=1)
 
@@ -113,6 +68,8 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             padx=10,
             pady=10,
         )
+    def build_drill_list(self):
+        """Build the drill browsing controls."""
 
         ctk.CTkLabel(
             self.blocks_frame,
@@ -161,6 +118,75 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             padx=10,
             pady=(0, 10),
         )
+    def build_frames(self):
+        """Build the main page containers."""
+
+        self.blocks_frame = ctk.CTkFrame(
+            self,
+            width=220,
+        )
+        self.blocks_frame.grid(
+            row=1,
+            column=0,
+            sticky="nsw",
+            padx=10,
+            pady=10,
+        )
+
+        self.drills_container = ctk.CTkFrame(self)
+        self.drills_container.grid(
+            row=1,
+            column=1,
+            sticky="nsew",
+            padx=10,
+            pady=10,
+        )
+        self.drills_container.grid_columnconfigure(0, weight=1)
+        self.drills_container.grid_rowconfigure(1, weight=1)
+
+        self.details_box = ctk.CTkTextbox(
+            self,
+            wrap="word",
+        )
+        self.details_box.grid(
+            row=1,
+            column=2,
+            rowspan=2,
+            sticky="nsew",
+            padx=10,
+            pady=10,
+        )
+    def build_titles(self):
+        
+        """Build the page titles."""
+
+        self.page_title = ctk.CTkLabel(
+            self,
+            text="Development Library",
+            font=("Segoe UI", 28, "bold"),
+        )
+
+        self.page_title.grid(
+            row=0,
+            column=0,
+            columnspan=3,
+            sticky="w",
+            padx=10,
+            pady=(10, 5),
+        )
+
+        details_title = ctk.CTkLabel(
+            self,
+            text="Drill Details",
+            font=("Segoe UI", 18, "bold"),
+        )
+
+        details_title.grid(
+            row=0,
+            column=2,
+            sticky="w",
+            padx=20,
+        )
     def configure_page_mode(self):
         """Configure the page for browsing or selecting practice drills."""
 
@@ -200,7 +226,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
 
     def show_drills(self, phase):
         """Display drills for the selected Practice Phase."""
-        print("ACTIVE SHOW_DRILLS METHOD")
+
         if self.selected_block_id != phase.id:
             self.selected_drill_ids.clear()
 
@@ -220,68 +246,61 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
                 text=f"Add Selected {phase.name} Drills to Practice",
             )
 
-            block_id = phase.id
-            if self.selected_block_id != phase.id:
-                self.selected_drill_ids.clear()
+        for widget in self.drills_frame.winfo_children():
+            widget.destroy()
 
-            self.selected_phase = phase.name
-            self.selected_block_id = phase.id
+        drills = self.service.get_drills_for_block(phase.id)
 
-            block_id = phase.id
+        if not drills:
+            label = ctk.CTkLabel(
+                self.drills_frame,
+                text="No drills found for this Practice Phase.",
+            )
+            label.pack(
+                anchor="w",
+                padx=10,
+                pady=10,
+            )
+            return
 
-            for widget in self.drills_frame.winfo_children():
-                widget.destroy()
+        for drill in drills:
+            self.build_drill_row(drill)
+    def build_drill_row(self, drill):
+        """Build one drill row in the drill list."""
 
-            drills = self.service.get_drills_for_block(block_id)
-            print(f"Block ID: {block_id}")
-            print(f"Drills returned: {len(drills)}")
+        row = ctk.CTkFrame(self.drills_frame)
+        row.pack(
+            fill="x",
+            padx=10,
+            pady=4,
+        )
 
-            if not drills:
-                label = ctk.CTkLabel(
-                    self.drills_frame,
-                    text="No drills found for this Practice Phase.",
-                )
-                label.pack(
-                    anchor="w",
-                    padx=10,
-                    pady=10,
-                )
-                return
-
-            for drill in drills:
-                row = ctk.CTkFrame(self.drills_frame)
-                row.pack(
-                    fill="x",
-                    padx=10,
-                    pady=4,
-                )
-
-                checkbox = ctk.CTkCheckBox(
-                    row,
-                    text="",
-                    width=30,
-                    command=lambda drill_id=drill.id: (
-                        self.toggle_drill_selection(drill_id)
-                    ),
-                )
-                checkbox.pack(
-                    side="left",
-                    padx=5,
-                )
-
-                button = ctk.CTkButton(
-                    row,
-                    text=drill.name,
-                    command=lambda d=drill: self.show_drill_details(d),
-                )
-
-                button.pack(
-                    side="left",
-                    fill="x",
-                    expand=True,
-                    padx=5,
-                )
-
+        if self.practice_builder_mode:
+            checkbox = ctk.CTkCheckBox(
+                row,
+                text="",
+                width=30,
+                command=lambda drill_id=drill.id: (
+                    self.toggle_drill_selection(drill_id)
+                ),
+            )
+            checkbox.pack(
+                side="left",
+                padx=5,
+            )
+        button = ctk.CTkButton(
+            row,
+            text=drill.name,
+            command=lambda selected_drill=drill: (
+                self.show_drill_details(selected_drill)
+            ),
+        )
+        button.pack(
+            side="left",
+            fill="x",
+            expand=True,
+            padx=5,
+        )
     def toggle_drill_selection(self, drill_id):
         """Add or remove a drill from the current selection."""
 

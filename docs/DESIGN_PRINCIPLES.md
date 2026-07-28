@@ -1,102 +1,83 @@
-Soccer Training Manager Design Principles
-1. KISS
+# Soccer Training Manager
 
-Keep It Simple.
+## Design Principles
 
-If there are two ways to accomplish the same task, choose the simpler one.
+### Our Mission
 
-2. Fewest Clicks Possible
+Soccer Training Manager is an assistant, not an instructor.
 
-Every click should have a purpose.
+The application helps coaches plan, organize, track, and evaluate training sessions while respecting the coach's experience, philosophy, and judgment.
 
-The coach should spend time coaching—not navigating software.
+The software manages information.
 
-3. Prevent Errors by Design
+The coach manages coaching.
 
-Don't rely on warning messages.
+---
 
-Design the workflow so mistakes are difficult or impossible to make.
+## Principle 1 – The Coach Decides
 
-Today's phase-selection discussion is a perfect example.
+The application never replaces the coach's judgment.
 
-4. Coach First
+It provides information, organization, and feedback so the coach can make better decisions.
 
-The application should mirror how coaches naturally think and work.
+---
 
-The software adapts to the coach—not the other way around.
+## Principle 2 – Reduce Administrative Work
 
-5. One Screen = One Purpose
+Every feature should save the coach time.
 
-Avoid screens that try to do everything.
+If a feature creates more work than it removes, it should be redesigned.
+
+---
+
+## Principle 3 – Show, Don't Judge
+
+The application reports facts.
 
 Examples:
 
-Browse Library
-Select Drills
-Practice Builder
-Practice Reflection
+✓ Number of drills
+✓ Practice duration
+✓ Player attendance
+✓ Development history
 
-Each has a clear purpose.
+The application does not tell the coach whether those facts are good or bad.
 
-6. Show Only What's Needed
+---
 
-Don't overwhelm the coach.
+## Principle 4 – Simplicity Wins
 
-If they're selecting Ball Mastery drills...
+The best interface is one that requires very little explanation.
 
-Show Ball Mastery drills.
+If a coach has to think about how to use a feature, the feature should be simplified.
 
-Nothing more.
+---
 
-7. Consistency
+## Principle 5 – Progress Belongs to the Coach
 
-If a button behaves one way on one page...
+A practice phase is ready when the coach says it is.
 
-It should behave the same way everywhere.
+The software may summarize progress, but it never defines success.
 
-8. Build for the Field
+---
 
-Assume the coach is:
+## Principle 6 – Consistency
 
-in a hurry
-standing outside
-distracted
-talking to players
+Every page should have a consistent layout, terminology, and workflow.
 
-The software should still be easy to use.
+Users should learn the application once.
 
-9. Coaches Coach
+---
 
-The software doesn't coach.
+## Principle 7 – Maintainability
 
-It supports the coach.
+Readable code is a feature.
 
-No automatic judgments.
+Future development should always favor clarity over cleverness.
 
-No telling the coach they're wrong.
-
-Provide information.
-
-Let the coach decide.
-
-10. Reflection Drives Improvement
-
-Every practice should make the next practice better.
-
-Plan → Practice → Reflect → Improve
-
-I think we should add one more...
-
-This one comes directly from watching how you've approached the project.
-
-11. Progress Over Perfection
-
-Don't wait until everything is perfect.
-
-Build.
-
-Test.
-
-Improve.
-
-Repeat.
+Version 0.4 (Practice Builder Redesign)
+Time-based Practice Gauge ⭐⭐⭐⭐⭐
+Status Cards for each phase ⭐⭐⭐⭐⭐
+Coach-controlled phase status ⭐⭐⭐⭐⭐
+Improved Practice Summary ⭐⭐⭐⭐☆
+Visual polish (spacing, icons, hierarchy) ⭐⭐⭐⭐☆

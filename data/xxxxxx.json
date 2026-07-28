@@ -1,0 +1,82 @@
+{
+    "name": "Tuesday Ball Mastery",
+    "practice_date": "",
+    "team_name": "",
+    "objective": "",
+    "activities": {
+        "Ball Mastery": [
+            {
+                "drill": {
+                    "id": 1,
+                    "name": "Toe Taps",
+                    "development_block_id": 1,
+                    "technical_focus_id": null,
+                    "purpose": "",
+                    "duration_minutes": 10,
+                    "recommended_players": "",
+                    "equipment": [],
+                    "coaching_points": [],
+                    "progressions": [],
+                    "variations": [],
+                    "notes": "",
+                    "active": true
+                },
+                "duration_override": null,
+                "repetitions": 1,
+                "rest_seconds": 30,
+                "coach_notes": ""
+            },
+            {
+                "drill": {
+                    "id": 1,
+                    "name": "Toe Taps and Sole Rolls",
+                    "development_block_id": 1,
+                    "technical_focus_id": 1,
+                    "purpose": "Improve comfort and control on the ball.",
+                    "duration_minutes": 10,
+                    "recommended_players": "Any",
+                    "equipment": [
+                        "Balls"
+                    ],
+                    "coaching_points": [],
+                    "progressions": [],
+                    "variations": [],
+                    "notes": "",
+                    "active": true
+                },
+                "duration_override": null,
+                "repetitions": 1,
+                "rest_seconds": 30,
+                "coach_notes": ""
+            },
+            {
+                "drill": {
+                    "id": 3,
+                    "name": "Shuffles",
+                    "development_block_id": 1,
+                    "technical_focus_id": 1,
+                    "purpose": "Control the ball.",
+                    "duration_minutes": 10,
+                    "recommended_players": "Any",
+                    "equipment": [
+                        "Balls"
+                    ],
+                    "coaching_points": [],
+                    "progressions": [],
+                    "variations": [],
+                    "notes": "",
+                    "active": true
+                },
+                "duration_override": null,
+                "repetitions": 1,
+                "rest_seconds": 30,
+                "coach_notes": ""
+            }
+        ],
+        "Receiving & Passing": [],
+        "1v1 Moves": [],
+        "Speed": [],
+        "Finishing": [],
+        "Group Play": []
+    }
+}

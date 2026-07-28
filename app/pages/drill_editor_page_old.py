@@ -2,12 +2,14 @@ import customtkinter as ctk
 
 from app.models.player_development import DEVELOPMENT_PHASES
 from app.services.coaching_library import (
+    get_coaching_focus_id_by_name,
+    get_coaching_focus_names_by_phase,
+)
+from app.services.coaching_library import (
     get_coaching_focus_by_id,
     get_coaching_focus_id_by_name,
     get_coaching_focus_names_by_phase,
 )
-
-
 class DrillEditorPage(ctk.CTkFrame):
     """Page used to create or edit a drill."""
 
@@ -46,7 +48,11 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(25, 10),
         )
 
-        title_text = "Edit Drill" if self.drill else "New Drill"
+        title_text = (
+            "Edit Drill"
+            if self.drill
+            else "New Drill"
+        )
 
         title = ctk.CTkLabel(
             header,
@@ -54,6 +60,7 @@ class DrillEditorPage(ctk.CTkFrame):
             font=("Segoe UI", 28, "bold"),
             anchor="w",
         )
+
         title.pack(fill="x")
 
         subtitle = ctk.CTkLabel(
@@ -63,6 +70,7 @@ class DrillEditorPage(ctk.CTkFrame):
             text_color="gray",
             anchor="w",
         )
+
         subtitle.pack(
             fill="x",
             pady=(4, 0),
@@ -125,6 +133,10 @@ class DrillEditorPage(ctk.CTkFrame):
         # Display the prompt without making it a selectable menu item.
         self.phase_menu.set(self.phase_prompt)
 
+        #
+        # Coaching Focus
+        #
+
         self._add_label(
             "Coaching Focus",
             row=2,
@@ -138,6 +150,7 @@ class DrillEditorPage(ctk.CTkFrame):
             values=[self.focus_prompt],
             height=38,
         )
+
         self.focus_menu.grid(
             row=3,
             column=1,
@@ -145,8 +158,8 @@ class DrillEditorPage(ctk.CTkFrame):
             padx=15,
             pady=(0, 18),
         )
-        self.focus_menu.set(self.focus_prompt)
 
+        self.focus_menu.set(self.focus_prompt)
         self._add_label("Purpose", row=4, column=0)
 
         purpose_help = ctk.CTkLabel(
@@ -178,7 +191,7 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(0, 18),
         )
 
-        self._add_label("Time (min)", row=7, column=0)
+        self._add_label("Duration (minutes)", row=7, column=0)
 
         self.duration_entry = ctk.CTkEntry(
             self.form,
@@ -193,7 +206,7 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(0, 18),
         )
 
-        self._add_label("Players", row=7, column=1)
+        self._add_label("Recommended Players", row=7, column=1)
 
         self.players_entry = ctk.CTkEntry(
             self.form,
@@ -207,114 +220,6 @@ class DrillEditorPage(ctk.CTkFrame):
             padx=15,
             pady=(0, 18),
         )
-
-        self._build_execution_details()
-
-    def _build_execution_details(self):
-        """Build the optional Sets/Reps section."""
-
-        self.use_execution_details_var = ctk.BooleanVar(value=False)
-
-        self.execution_checkbox = ctk.CTkCheckBox(
-            self.form,
-            text="Sets/Reps",
-            variable=self.use_execution_details_var,
-            command=self._toggle_execution_details,
-        )
-        self.execution_checkbox.grid(
-            row=9,
-            column=0,
-            columnspan=2,
-            sticky="w",
-            padx=15,
-            pady=(4, 12),
-        )
-
-        self.execution_frame = ctk.CTkFrame(self.form)
-        self.execution_frame.grid(
-            row=10,
-            column=0,
-            columnspan=2,
-            sticky="ew",
-            padx=15,
-            pady=(0, 18),
-        )
-
-        for column in range(4):
-            self.execution_frame.grid_columnconfigure(column, weight=1)
-
-        self.sets_entry = self._add_execution_field(
-            label="Sets",
-            placeholder="3",
-            column=0,
-        )
-        self.reps_entry = self._add_execution_field(
-            label="Reps",
-            placeholder="10",
-            column=1,
-        )
-        self.work_entry = self._add_execution_field(
-            label="Work (sec)",
-            placeholder="45",
-            column=2,
-        )
-        self.rest_entry = self._add_execution_field(
-            label="Rest (sec)",
-            placeholder="30",
-            column=3,
-        )
-
-        # Keep the form uncluttered until the coach selects Sets/Reps.
-        self.execution_frame.grid_remove()
-
-    def _add_execution_field(self, label, placeholder, column):
-        field_frame = ctk.CTkFrame(
-            self.execution_frame,
-            fg_color="transparent",
-        )
-        field_frame.grid(
-            row=0,
-            column=column,
-            sticky="ew",
-            padx=8,
-            pady=10,
-        )
-
-        field_frame.grid_columnconfigure(0, weight=1)
-
-        field_label = ctk.CTkLabel(
-            field_frame,
-            text=label,
-            font=("Segoe UI", 13, "bold"),
-            anchor="w",
-        )
-        field_label.grid(
-            row=0,
-            column=0,
-            sticky="ew",
-            pady=(0, 6),
-        )
-
-        entry = ctk.CTkEntry(
-            field_frame,
-            placeholder_text=placeholder,
-            height=36,
-        )
-        entry.grid(
-            row=1,
-            column=0,
-            sticky="ew",
-        )
-
-        return entry
-
-    def _toggle_execution_details(self):
-        """Show or hide Sets, Reps, Work, and Rest."""
-
-        if self.use_execution_details_var.get():
-            self.execution_frame.grid()
-        else:
-            self.execution_frame.grid_remove()
 
     def _build_buttons(self):
         button_frame = ctk.CTkFrame(
@@ -362,9 +267,10 @@ class DrillEditorPage(ctk.CTkFrame):
             padx=15,
             pady=(8, 6),
         )
-
     def _phase_changed(self, selected_phase_name):
-        """Load the Coaching Focuses for the selected Development Phase."""
+        """
+        Load the Coaching Focuses for the selected Development Phase.
+        """
 
         selected_phase = self.phase_lookup.get(selected_phase_name)
 
@@ -390,9 +296,15 @@ class DrillEditorPage(ctk.CTkFrame):
     def _load_drill(self):
         """Populate the editor from an existing drill."""
 
+        #
+        # Drill Name
+        #
         self.name_entry.delete(0, "end")
         self.name_entry.insert(0, self.drill.name)
 
+        #
+        # Development Phase
+        #
         selected_phase_name = None
 
         for menu_name, phase in self.phase_lookup.items():
@@ -402,9 +314,17 @@ class DrillEditorPage(ctk.CTkFrame):
 
         if selected_phase_name is not None:
             self.phase_menu.set(selected_phase_name)
+
+            #
+            # Populate the Coaching Focus list
+            #
             self._phase_changed(selected_phase_name)
 
+        #
+        # Coaching Focus
+        #
         if self.drill.technical_focus_id:
+
             focus = get_coaching_focus_by_id(
                 self.drill.technical_focus_id
             )
@@ -412,51 +332,32 @@ class DrillEditorPage(ctk.CTkFrame):
             if focus:
                 self.focus_menu.set(focus.name)
 
+        #
+        # Purpose
+        #
         self.purpose_textbox.delete("1.0", "end")
         self.purpose_textbox.insert(
             "1.0",
             self.drill.purpose,
         )
 
-        self._set_entry(
-            self.duration_entry,
-            self.drill.duration_minutes,
-        )
-        self._set_entry(
-            self.players_entry,
-            self.drill.recommended_players,
-        )
-
-        # getattr keeps older Drill objects compatible until the model is updated.
-        sets = getattr(self.drill, "sets", None)
-        reps = getattr(self.drill, "reps", None)
-        work_seconds = getattr(self.drill, "work_seconds", None)
-        rest_seconds = getattr(self.drill, "rest_seconds", None)
-
-        has_execution_details = any(
-            value not in (None, "")
-            for value in (
-                sets,
-                reps,
-                work_seconds,
-                rest_seconds,
-            )
+        #
+        # Duration
+        #
+        self.duration_entry.delete(0, "end")
+        self.duration_entry.insert(
+            0,
+            str(self.drill.duration_minutes),
         )
 
-        if has_execution_details:
-            self.use_execution_details_var.set(True)
-            self._set_entry(self.sets_entry, sets)
-            self._set_entry(self.reps_entry, reps)
-            self._set_entry(self.work_entry, work_seconds)
-            self._set_entry(self.rest_entry, rest_seconds)
-            self._toggle_execution_details()
-
-    @staticmethod
-    def _set_entry(entry, value):
-        entry.delete(0, "end")
-
-        if value not in (None, ""):
-            entry.insert(0, str(value))
+        #
+        # Recommended Players
+        #
+        self.players_entry.delete(0, "end")
+        self.players_entry.insert(
+            0,
+            str(self.drill.recommended_players),
+        )
 
     def _save(self):
         """Collect the drill values and send them to the save callback."""
@@ -478,8 +379,6 @@ class DrillEditorPage(ctk.CTkFrame):
                     development_phase_id=development_block_id,
                 )
 
-        use_execution_details = self.use_execution_details_var.get()
-
         drill_data = {
             "name": self.name_entry.get().strip(),
             "development_block_id": development_block_id,
@@ -500,28 +399,9 @@ class DrillEditorPage(ctk.CTkFrame):
             ).strip(),
             "duration_minutes": self.duration_entry.get().strip(),
             "recommended_players": self.players_entry.get().strip(),
-            "use_execution_details": use_execution_details,
-            "sets": (
-                self.sets_entry.get().strip()
-                if use_execution_details
-                else ""
-            ),
-            "reps": (
-                self.reps_entry.get().strip()
-                if use_execution_details
-                else ""
-            ),
-            "work_seconds": (
-                self.work_entry.get().strip()
-                if use_execution_details
-                else ""
-            ),
-            "rest_seconds": (
-                self.rest_entry.get().strip()
-                if use_execution_details
-                else ""
-            ),
         }
+        if self.drill is not None:
+            drill_data["id"] = self.drill.id
 
         if self.drill is not None:
             drill_data["id"] = self.drill.id

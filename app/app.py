@@ -246,7 +246,6 @@ class SoccerTrainingManager(ctk.CTk):
         self.show_practice_builder()
     def new_practice(self):
         """Start a brand-new practice."""
-        print("NEW PRACTICE CALLED")
         self.current_practice = Practice()
         self.show_practice_builder()
     def open_practice(self):
@@ -274,20 +273,6 @@ class SoccerTrainingManager(ctk.CTk):
             return
 
         self.practice_builder_page.update_practice_information()
-        print(
-        "Same object:",
-        self.practice_builder_page.practice is self.current_practice
-        )
-
-        print(
-            "Page name:",
-            self.practice_builder_page.practice.name
-        )
-
-        print(
-            "Current name:",
-            self.current_practice.name
-        )
 
         filename = filedialog.asksaveasfilename(
             title="Save Practice",
@@ -346,6 +331,13 @@ class SoccerTrainingManager(ctk.CTk):
     def handle_drill_editor_save(self, data):
         """Create a new drill or update an existing drill."""
 
+        def to_int_or_none(value):
+            value = str(value).strip()
+
+            if value == "":
+                return None
+
+            return int(value)
         existing_drills = self.repositories.drills.get_all()
 
         phase = get_phase_by_name(data["development_phase"])
@@ -384,6 +376,19 @@ class SoccerTrainingManager(ctk.CTk):
             drill.duration_minutes = int(
                 data["duration_minutes"] or 0
             )
+            drill.use_execution_details = data.get(
+                "use_execution_details",
+                False,
+            )
+
+            drill.sets = to_int_or_none(data.get("sets", ""))
+            drill.reps = to_int_or_none(data.get("reps", ""))
+            drill.work_seconds = to_int_or_none(
+                data.get("work_seconds", "")
+            )
+            drill.rest_seconds = to_int_or_none(
+                data.get("rest_seconds", "")
+            )
             drill.recommended_players = data[
                 "recommended_players"
             ].strip()
@@ -413,6 +418,19 @@ class SoccerTrainingManager(ctk.CTk):
                 recommended_players=data[
                     "recommended_players"
                 ].strip(),
+
+                use_execution_details=data.get(
+                    "use_execution_details",
+                    False,
+                ),
+                sets=to_int_or_none(data.get("sets", "")),
+                reps=to_int_or_none(data.get("reps", "")),
+                work_seconds=to_int_or_none(
+                    data.get("work_seconds", "")
+                ),
+                rest_seconds=to_int_or_none(
+                    data.get("rest_seconds", "")
+                ),
             )
 
             action = "Created"
