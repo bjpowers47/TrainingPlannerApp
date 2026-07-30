@@ -216,6 +216,9 @@ class PracticeActivityRow(ctk.CTkFrame):
             textvariable=variable,
             justify="center",
         )
+        if label == "Time":
+            entry.configure(state="readonly")
+
         entry.pack(side="left")
 
         if suffix:
