@@ -95,11 +95,9 @@ class Practice:
 
         for activities in self.activities.values():
             for activity in activities:
-                if activity.manual_duration_minutes is not None:
-                    total += activity.manual_duration_minutes
+                total += activity.calculated_duration_minutes()
 
-        return total
-
+        return round(total)
     def save_to_json(self, filename: str) -> None:
         """Save the practice to a JSON file."""
 
@@ -179,7 +177,7 @@ class Practice:
 
                     activity = PracticeActivity(
                         drill=drill,
-                        duration_minutes=activity_data.get(
+                        manual_duration_minutes=activity_data.get(
                             "duration_minutes"
                         ),
                         sets=activity_data.get("sets"),
