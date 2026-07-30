@@ -14,6 +14,11 @@
                     "purpose": "",
                     "duration_minutes": 10,
                     "recommended_players": "",
+                    "use_execution_details": false,
+                    "sets": null,
+                    "reps": null,
+                    "work_seconds": null,
+                    "rest_seconds": null,
                     "equipment": [],
                     "coaching_points": [],
                     "progressions": [],
@@ -21,13 +26,77 @@
                     "notes": "",
                     "active": true
                 },
-                "duration_override": null,
-                "repetitions": 1,
+                "duration_minutes": 10,
+                "sets": null,
+                "reps": 2,
+                "work_seconds": 120,
                 "rest_seconds": 30,
+                "coach_notes": ""
+            },
+            {
+                "drill": {
+                    "id": 3,
+                    "name": "Shuffles",
+                    "development_block_id": 1,
+                    "technical_focus_id": 1,
+                    "purpose": "Control the ball.",
+                    "duration_minutes": 10,
+                    "recommended_players": "Any",
+                    "use_execution_details": false,
+                    "sets": null,
+                    "reps": null,
+                    "work_seconds": null,
+                    "rest_seconds": null,
+                    "equipment": [
+                        "Balls"
+                    ],
+                    "coaching_points": [],
+                    "progressions": [],
+                    "variations": [],
+                    "notes": "",
+                    "active": true
+                },
+                "duration_minutes": 15,
+                "sets": 3,
+                "reps": 15,
+                "work_seconds": 14,
+                "rest_seconds": 5,
                 "coach_notes": ""
             }
         ],
-        "Receiving & Passing": [],
+        "Receiving & Passing": [
+            {
+                "drill": {
+                    "id": 2,
+                    "name": "Triangle Passing",
+                    "development_block_id": 2,
+                    "technical_focus_id": 2,
+                    "purpose": "Improve first touch, passing angles, and movement after the pass.",
+                    "duration_minutes": 15,
+                    "recommended_players": "6-12",
+                    "use_execution_details": false,
+                    "sets": null,
+                    "reps": null,
+                    "work_seconds": null,
+                    "rest_seconds": null,
+                    "equipment": [
+                        "Balls",
+                        "Cones"
+                    ],
+                    "coaching_points": [],
+                    "progressions": [],
+                    "variations": [],
+                    "notes": "",
+                    "active": true
+                },
+                "duration_minutes": 15,
+                "sets": null,
+                "reps": null,
+                "work_seconds": null,
+                "rest_seconds": null,
+                "coach_notes": ""
+            }
+        ],
         "1v1 Moves": [],
         "Speed": [],
         "Finishing": [],

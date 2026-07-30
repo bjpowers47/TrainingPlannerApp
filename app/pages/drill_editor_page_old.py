@@ -347,7 +347,7 @@ class DrillEditorPage(ctk.CTkFrame):
         self.duration_entry.delete(0, "end")
         self.duration_entry.insert(
             0,
-            str(self.drill.duration_minutes),
+            str(activity.manual_duration_minutes or ""),
         )
 
         #

@@ -194,7 +194,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             self.configure_practice_builder_mode()
         else:
             self.configure_browse_mode()    
-
     def show_welcome_message(self):
         """Display the opening message."""
 
@@ -212,7 +211,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
                 "Development Library\n\n"
                 "Select a Practice Phase.",
             )
-
     def load_blocks(self):
         """Create the Development Phase buttons."""
 
@@ -223,7 +221,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
                 command=lambda selected_phase=phase: self.show_drills(selected_phase),
             )
             button.pack(fill="x", padx=5, pady=5)
-
     def show_drills(self, phase):
         """Display drills for the selected Practice Phase."""
 
@@ -308,7 +305,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             self.selected_drill_ids.remove(drill_id)
         else:
             self.selected_drill_ids.add(drill_id)
-
     def show_drill_details(self, drill):
         """Display the selected drill's information."""
 

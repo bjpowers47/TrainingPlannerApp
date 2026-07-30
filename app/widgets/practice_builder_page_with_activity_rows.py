@@ -116,29 +116,31 @@ class PracticeBuilderPage(ctk.CTkFrame):
             if activities:
                 for activity in activities:
                     activity_row = PracticeActivityRow(
-                        section,
+                        parent=section,
                         activity=activity,
-                        move_up_callback=lambda selected_phase=phase, selected_activity=activity: (
-                            self.move_activity_up(
+                        move_up_callback=(
+                            lambda selected_phase=phase,
+                            selected_activity=activity: self.move_activity_up(
                                 selected_phase,
                                 selected_activity,
                             )
                         ),
-                        move_down_callback=lambda selected_phase=phase, selected_activity=activity: (
-                            self.move_activity_down(
+                        move_down_callback=(
+                            lambda selected_phase=phase,
+                            selected_activity=activity: self.move_activity_down(
                                 selected_phase,
                                 selected_activity,
                             )
                         ),
-                        remove_callback=lambda selected_phase=phase, selected_activity=activity: (
-                            self.remove_activity(
+                        remove_callback=(
+                            lambda selected_phase=phase,
+                            selected_activity=activity: self.remove_activity(
                                 selected_phase,
                                 selected_activity,
                             )
                         ),
                         activity_changed_callback=self.refresh_summary,
                     )
-
                     activity_row.pack(
                         fill="x",
                         padx=25,

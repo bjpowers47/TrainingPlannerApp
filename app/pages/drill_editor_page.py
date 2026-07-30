@@ -211,26 +211,18 @@ class DrillEditorPage(ctk.CTkFrame):
         self._build_execution_details()
 
     def _build_execution_details(self):
-        """Build the optional Sets/Reps section."""
+        """Build the optional execution detail fields."""
 
-        self.use_execution_details_var = ctk.BooleanVar(value=False)
-
-        self.execution_checkbox = ctk.CTkCheckBox(
-            self.form,
-            text="Sets/Reps",
-            variable=self.use_execution_details_var,
-            command=self._toggle_execution_details,
-        )
-        self.execution_checkbox.grid(
+        self._add_label(
+            "Execution Details",
             row=9,
             column=0,
-            columnspan=2,
-            sticky="w",
-            padx=15,
-            pady=(4, 12),
         )
 
-        self.execution_frame = ctk.CTkFrame(self.form)
+        self.execution_frame = ctk.CTkFrame(
+            self.form,
+            fg_color="transparent",
+        )
         self.execution_frame.grid(
             row=10,
             column=0,
@@ -263,9 +255,6 @@ class DrillEditorPage(ctk.CTkFrame):
             placeholder="30",
             column=3,
         )
-
-        # Keep the form uncluttered until the coach selects Sets/Reps.
-        self.execution_frame.grid_remove()
 
     def _add_execution_field(self, label, placeholder, column):
         field_frame = ctk.CTkFrame(
@@ -307,14 +296,6 @@ class DrillEditorPage(ctk.CTkFrame):
         )
 
         return entry
-
-    def _toggle_execution_details(self):
-        """Show or hide Sets, Reps, Work, and Rest."""
-
-        if self.use_execution_details_var.get():
-            self.execution_frame.grid()
-        else:
-            self.execution_frame.grid_remove()
 
     def _build_buttons(self):
         button_frame = ctk.CTkFrame(
@@ -433,23 +414,10 @@ class DrillEditorPage(ctk.CTkFrame):
         work_seconds = getattr(self.drill, "work_seconds", None)
         rest_seconds = getattr(self.drill, "rest_seconds", None)
 
-        has_execution_details = any(
-            value not in (None, "")
-            for value in (
-                sets,
-                reps,
-                work_seconds,
-                rest_seconds,
-            )
-        )
-
-        if has_execution_details:
-            self.use_execution_details_var.set(True)
-            self._set_entry(self.sets_entry, sets)
-            self._set_entry(self.reps_entry, reps)
-            self._set_entry(self.work_entry, work_seconds)
-            self._set_entry(self.rest_entry, rest_seconds)
-            self._toggle_execution_details()
+        self._set_entry(self.sets_entry, sets)
+        self._set_entry(self.reps_entry, reps)
+        self._set_entry(self.work_entry, work_seconds)
+        self._set_entry(self.rest_entry, rest_seconds)
 
     @staticmethod
     def _set_entry(entry, value):
@@ -478,7 +446,19 @@ class DrillEditorPage(ctk.CTkFrame):
                     development_phase_id=development_block_id,
                 )
 
-        use_execution_details = self.use_execution_details_var.get()
+        sets = self.sets_entry.get().strip()
+        reps = self.reps_entry.get().strip()
+        work_seconds = self.work_entry.get().strip()
+        rest_seconds = self.rest_entry.get().strip()
+
+        use_execution_details = any(
+            (
+                sets,
+                reps,
+                work_seconds,
+                rest_seconds,
+            )
+        )
 
         drill_data = {
             "name": self.name_entry.get().strip(),
@@ -501,26 +481,10 @@ class DrillEditorPage(ctk.CTkFrame):
             "duration_minutes": self.duration_entry.get().strip(),
             "recommended_players": self.players_entry.get().strip(),
             "use_execution_details": use_execution_details,
-            "sets": (
-                self.sets_entry.get().strip()
-                if use_execution_details
-                else ""
-            ),
-            "reps": (
-                self.reps_entry.get().strip()
-                if use_execution_details
-                else ""
-            ),
-            "work_seconds": (
-                self.work_entry.get().strip()
-                if use_execution_details
-                else ""
-            ),
-            "rest_seconds": (
-                self.rest_entry.get().strip()
-                if use_execution_details
-                else ""
-            ),
+            "sets": sets,
+            "reps": reps,
+            "work_seconds": work_seconds,
+            "rest_seconds": rest_seconds,
         }
 
         if self.drill is not None:
