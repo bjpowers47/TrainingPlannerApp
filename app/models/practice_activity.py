@@ -26,11 +26,10 @@ class PracticeActivity:
 
     drill: Drill
 
-    manual_duration_minutes: int | None = None
     sets: int = 1
     reps: str = ""
-    work_seconds: int = 0
-    rest_seconds: int = 0
+    work_seconds: int | None = 0
+    rest_seconds: int | None = 0
 
     coach_notes: str = ""
 
@@ -45,7 +44,6 @@ class PracticeActivity:
 
         return cls(
             drill=drill,
-            manual_duration_minutes=drill.duration_minutes,
             sets=drill.sets,
             reps=str(drill.reps) if drill.reps is not None else "",
             work_seconds=drill.work_seconds,
