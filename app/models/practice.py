@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from app.models.drill import Drill
-from app.models.player_development import get_phase_names
+from app.models.player_development import get_block_names
 from app.models.practice_activity import PracticeActivity
 
 
@@ -29,25 +29,25 @@ class Practice:
 
     activities: dict[str, list[PracticeActivity]] = field(
         default_factory=lambda: {
-            phase_name: []
-            for phase_name in get_phase_names()
+            block_name: []
+            for block_name in get_block_names()
         }
     )
 
-    def add_activity(self, phase: str, drill: Drill) -> None:
-        """Add a drill to a practice phase using the drill defaults."""
+    def add_activity(self, block: str, drill: Drill) -> None:
+        """Add a drill to a practice block using the drill defaults."""
 
         activity = PracticeActivity.from_drill(drill)
-        self.activities[phase].append(activity)
+        self.activities[block].append(activity)
 
     def remove_activity(
         self,
-        phase: str,
+        block: str,
         activity_or_drill,
     ) -> None:
-        """Remove an activity or its source drill from a practice phase."""
+        """Remove an activity or its source drill from a practice block."""
 
-        activities = self.activities.get(phase, [])
+        activities = self.activities.get(block, [])
 
         for activity in activities:
             if (
@@ -57,20 +57,20 @@ class Practice:
                 activities.remove(activity)
                 return
 
-    def get_activities(self, phase: str) -> list[PracticeActivity]:
-        """Return all activities for a phase."""
+    def get_activities(self, block: str) -> list[PracticeActivity]:
+        """Return all activities for a block."""
 
-        return self.activities[phase]
+        return self.activities[block]
 
-    def get_phase_names(self) -> list[str]:
-        """Return the practice phases in display order."""
+    def get_block_names(self) -> list[str]:
+        """Return the practice blocks in display order."""
 
-        return get_phase_names()
+        return get_block_names()
 
-    def has_activities(self, phase: str) -> bool:
-        """Return True when a phase contains activities."""
+    def has_activities(self, block: str) -> bool:
+        """Return True when a block contains activities."""
 
-        return len(self.activities[phase]) > 0
+        return len(self.activities[block]) > 0
 
     def activity_count(self) -> int:
         """Return the total number of activities in the practice."""
@@ -80,12 +80,12 @@ class Practice:
             for activities in self.activities.values()
         )
 
-    def activity_count_by_phase(self) -> dict[str, int]:
-        """Return the number of activities in each practice phase."""
+    def activity_count_by_block(self) -> dict[str, int]:
+        """Return the number of activities in each practice block."""
 
         return {
-            phase: len(self.activities.get(phase, []))
-            for phase in self.get_phase_names()
+            block: len(self.activities.get(block, []))
+            for block in self.get_block_names()
         }
 
     def total_duration(self) -> int:
@@ -111,8 +111,8 @@ class Practice:
             "activities": {},
         }
 
-        for phase, activities in self.activities.items():
-            practice_data["activities"][phase] = [
+        for block, activities in self.activities.items():
+            practice_data["activities"][block] = [
                 asdict(activity)
                 for activity in activities
             ]
@@ -163,12 +163,12 @@ class Practice:
             {},
         )
 
-        for phase, phase_activities in saved_activities.items():
+        for block, block_activities in saved_activities.items():
 
-            if phase not in practice.activities:
-                practice.activities[phase] = []
+            if block not in practice.activities:
+                practice.activities[block] = []
 
-            for activity_data in phase_activities:
+            for activity_data in block_activities:
 
                 if "drill" in activity_data:
                     drill = Drill(
@@ -218,6 +218,6 @@ class Practice:
                     drill = Drill(**activity_data)
                     activity = PracticeActivity.from_drill(drill)
 
-                practice.activities[phase].append(activity)
+                practice.activities[block].append(activity)
 
         return practice

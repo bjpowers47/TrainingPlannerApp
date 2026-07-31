@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class DevelopmentPhase:
+class DevelopmentBlock:
     """Represents one level of the Pyramid of Player Development."""
 
     id: int
@@ -11,38 +11,38 @@ class DevelopmentPhase:
     description: str
 
 
-DEVELOPMENT_PHASES = [
-    DevelopmentPhase(
+DEVELOPMENT_BLOCKS = [
+    DevelopmentBlock(
         1,
         "Ball Mastery",
         "⚽",
         "Develop confidence, comfort and control with the ball.",
     ),
-    DevelopmentPhase(
+    DevelopmentBlock(
         2,
         "Receiving & Passing",
         "🎯",
         "Develop first touch, passing accuracy and teamwork.",
     ),
-    DevelopmentPhase(
+    DevelopmentBlock(
         3,
         "1v1 Moves",
         "🕺",
         "Develop the ability to beat an opponent in individual situations.",
     ),
-    DevelopmentPhase(
+    DevelopmentBlock(
         4,
         "Speed",
         "⚡",
         "Develop both physical speed and speed of play.",
     ),
-    DevelopmentPhase(
+    DevelopmentBlock(
         5,
         "Finishing",
         "🥅",
         "Develop confidence and technique in front of goal.",
     ),
-    DevelopmentPhase(
+    DevelopmentBlock(
         6,
         "Group Play",
         "👥",
@@ -50,33 +50,33 @@ DEVELOPMENT_PHASES = [
     ),
 ]
 
-def get_phase_names() -> list[str]:
-    return [phase.name for phase in DEVELOPMENT_PHASES]
+def get_block_names() -> list[str]:
+    return [block.name for block in DEVELOPMENT_BLOCKS]
 
 
-def get_phase_by_id(phase_id: int) -> DevelopmentPhase:
-    for phase in DEVELOPMENT_PHASES:
-        if phase.id == phase_id:
-            return phase
+def get_block_by_id(block_id: int) -> DevelopmentBlock:
+    for block in DEVELOPMENT_BLOCKS:
+        if block.id == block_id:
+            return block
 
     raise ValueError(
-        f"Unknown development phase ID: {phase_id}"
+        f"Unknown development block ID: {block_id}"
     )
 
 
-def get_phase_by_name(name: str) -> DevelopmentPhase | None:
-    """Find a development phase by its plain or display name."""
+def get_block_by_name(name: str) -> DevelopmentBlock | None:
+    """Find a development block by its plain or display name."""
 
     clean_name = name.strip()
 
-    for phase in DEVELOPMENT_PHASES:
-        display_name = f"{phase.icon} {phase.name}"
+    for block in DEVELOPMENT_BLOCKS:
+        display_name = f"{block.icon} {block.name}"
 
         if clean_name.casefold() in {
-            phase.name.casefold(),
+            block.name.casefold(),
             display_name.casefold(),
         }:
-            return phase
+            return block
 
     return None
 
@@ -84,9 +84,9 @@ def get_phase_by_name(name: str) -> DevelopmentPhase | None:
 def get_display_name(name: str) -> str:
     """Return the icon and name used by the user interface."""
 
-    phase = get_phase_by_name(name)
+    block = get_block_by_name(name)
 
-    if phase is None:
-        raise ValueError(f"Unknown development phase: {name}")
+    if block is None:
+        raise ValueError(f"Unknown development block: {name}")
 
-    return f"{phase.icon} {phase.name}"
+    return f"{block.icon} {block.name}"

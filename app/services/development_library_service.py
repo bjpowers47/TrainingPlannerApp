@@ -20,8 +20,8 @@ from collections import defaultdict
 class DevelopmentLibraryService:
     """Service layer for the Development Library."""
     
-    def get_drills_by_phase(self):
-        """Return active drills grouped by development phase ID."""
+    def get_drills_by_block(self):
+        """Return active drills grouped by development block ID."""
 
         grouped = defaultdict(list)
 

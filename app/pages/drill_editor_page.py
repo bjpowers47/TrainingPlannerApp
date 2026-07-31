@@ -1,10 +1,10 @@
 import customtkinter as ctk
 
-from app.models.player_development import DEVELOPMENT_PHASES
+from app.models.player_development import DEVELOPMENT_BLOCKS
 from app.services.coaching_library import (
     get_coaching_focus_by_id,
     get_coaching_focus_id_by_name,
-    get_coaching_focus_names_by_phase,
+    get_coaching_focus_names_by_block,
 )
 
 
@@ -99,22 +99,22 @@ class DrillEditorPage(ctk.CTkFrame):
 
         self._add_label("Development Phase", row=2, column=0)
 
-        self.phase_prompt = "Select Development Phase"
+        self.block_prompt = "Select Development Phase"
 
-        self.phase_lookup = {
-            f"{phase.icon} {phase.name}": phase
-            for phase in DEVELOPMENT_PHASES
+        self.block_lookup = {
+            f"{block.icon} {block.name}": block
+            for block in DEVELOPMENT_BLOCKS
         }
 
-        phase_names = list(self.phase_lookup.keys())
+        block_names = list(self.block_lookup.keys())
 
-        self.phase_menu = ctk.CTkOptionMenu(
+        self.block_menu = ctk.CTkOptionMenu(
             self.form,
-            values=phase_names,
+            values=block_names,
             height=38,
-            command=self._phase_changed,
+            command=self._block_changed,
         )
-        self.phase_menu.grid(
+        self.block_menu.grid(
             row=3,
             column=0,
             sticky="ew",
@@ -123,7 +123,7 @@ class DrillEditorPage(ctk.CTkFrame):
         )
 
         # Display the prompt without making it a selectable menu item.
-        self.phase_menu.set(self.phase_prompt)
+        self.block_menu.set(self.block_prompt)
 
         self._add_label(
             "Coaching Focus",
@@ -344,20 +344,20 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(8, 6),
         )
 
-    def _phase_changed(self, selected_phase_name):
+    def _block_changed(self, selected_block_name):
         """Load the Coaching Focuses for the selected Development Phase."""
 
-        selected_phase = self.phase_lookup.get(selected_phase_name)
+        selected_block = self.block_lookup.get(selected_block_name)
 
-        if selected_phase is None:
+        if selected_block is None:
             self.focus_menu.configure(
                 values=[self.focus_prompt]
             )
             self.focus_menu.set(self.focus_prompt)
             return
 
-        focus_names = get_coaching_focus_names_by_phase(
-            selected_phase.id
+        focus_names = get_coaching_focus_names_by_block(
+            selected_block.id
         )
 
         menu_values = [
@@ -374,16 +374,16 @@ class DrillEditorPage(ctk.CTkFrame):
         self.name_entry.delete(0, "end")
         self.name_entry.insert(0, self.drill.name)
 
-        selected_phase_name = None
+        selected_block_name = None
 
-        for menu_name, phase in self.phase_lookup.items():
-            if phase.id == self.drill.development_block_id:
-                selected_phase_name = menu_name
+        for menu_name, block in self.block_lookup.items():
+            if block.id == self.drill.development_block_id:
+                selected_block_name = menu_name
                 break
 
-        if selected_phase_name is not None:
-            self.phase_menu.set(selected_phase_name)
-            self._phase_changed(selected_phase_name)
+        if selected_block_name is not None:
+            self.block_menu.set(selected_block_name)
+            self._block_changed(selected_block_name)
 
         if self.drill.technical_focus_id:
             focus = get_coaching_focus_by_id(
@@ -429,21 +429,21 @@ class DrillEditorPage(ctk.CTkFrame):
     def _save(self):
         """Collect the drill values and send them to the save callback."""
 
-        selected_phase_name = self.phase_menu.get()
-        selected_phase = self.phase_lookup.get(selected_phase_name)
+        selected_block_name = self.block_menu.get()
+        selected_block = self.block_lookup.get(selected_block_name)
 
         selected_focus_name = self.focus_menu.get()
 
         development_block_id = None
         technical_focus_id = None
 
-        if selected_phase is not None:
-            development_block_id = selected_phase.id
+        if selected_block is not None:
+            development_block_id = selected_block.id
 
             if selected_focus_name != "Not selected":
                 technical_focus_id = get_coaching_focus_id_by_name(
                     name=selected_focus_name,
-                    development_phase_id=development_block_id,
+                    development_block_id=development_block_id,
                 )
 
         sets = self.sets_entry.get().strip()
@@ -464,9 +464,9 @@ class DrillEditorPage(ctk.CTkFrame):
             "name": self.name_entry.get().strip(),
             "development_block_id": development_block_id,
             "technical_focus_id": technical_focus_id,
-            "development_phase": (
-                selected_phase.name
-                if selected_phase is not None
+            "development_block": (
+                selected_block.name
+                if selected_block is not None
                 else ""
             ),
             "technical_focus": (

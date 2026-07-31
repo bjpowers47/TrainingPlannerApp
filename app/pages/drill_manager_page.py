@@ -1,6 +1,6 @@
 import customtkinter as ctk
 
-from app.models.player_development import DEVELOPMENT_PHASES
+from app.models.player_development import DEVELOPMENT_BLOCKS
 
 
 class DrillManagerPage(ctk.CTkFrame):
@@ -52,16 +52,16 @@ class DrillManagerPage(ctk.CTkFrame):
 
         grouped = self.drill_service.get_drills_by_phase()
 
-        for phase in DEVELOPMENT_PHASES:
-            drills = grouped.get(phase.id, [])
+        for block in DEVELOPMENT_BLOCKS:
+            drills = grouped.get(block.id, [])
 
-            phase_label = ctk.CTkLabel(
+            block_label = ctk.CTkLabel(
                 self.list_frame,
-                text=f"{phase.icon} {phase.name} ({len(drills)})",
+                text=f"{block.icon} {block.name} ({len(drills)})",
                 anchor="w",
                 font=("Segoe UI", 16, "bold"),
             )
-            phase_label.pack(
+            block_label.pack(
                 fill="x",
                 padx=10,
                 pady=(15, 5),

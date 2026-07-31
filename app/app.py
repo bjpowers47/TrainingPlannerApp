@@ -12,7 +12,7 @@ from app.pages.practice_builder_page import PracticeBuilderPage
 from app.pages.administration_page import AdministrationPage
 from app.pages.drill_manager_page import DrillManagerPage
 from app.models.practice import Practice
-from app.models.player_development import get_phase_by_name
+from app.models.player_development import get_block_by_name
 from app.pages.drill_editor_page import DrillEditorPage
 from app.models.drill import Drill
 
@@ -194,7 +194,7 @@ class SoccerTrainingManager(ctk.CTk):
         self.practice_builder_page = PracticeBuilderPage(
             self.content,
             self.current_practice,
-            self.show_development_library_for_phase,
+            self.show_development_library_for_block,
         )
         self.practice_builder_page.pack(
             fill="both",
@@ -213,13 +213,13 @@ class SoccerTrainingManager(ctk.CTk):
 # Practice Management
 # ==========================================================
 
-    def show_development_library_for_phase(self, phase):
-        """Open the library for a selected development phase."""
+    def show_development_library_for_block(self, block):
+        """Open the library for a selected development block."""
 
-        selected_development_phase = get_phase_by_name(phase)
+        selected_development_block = get_block_by_name(block)
 
-        if selected_development_phase is None:
-            print(f"Unknown development phase: {phase}")
+        if selected_development_block is None:
+            print(f"Unknown development block: {block}")
             return
 
         self.clear_content()
@@ -227,19 +227,19 @@ class SoccerTrainingManager(ctk.CTk):
         page = DevelopmentLibraryPage(
             self.content,
             self.development_library_service,
-            selected_phase=phase,
+            selected_block=block,
             add_to_practice_callback=self.add_drills_to_practice,
         )
 
         page.pack(fill="both", expand=True)
 
-        page.show_drills(selected_development_phase)
-    def add_drills_to_practice(self, phase, drills):
+        page.show_drills(selected_development_block)
+    def add_drills_to_practice(self, block, drills):
         """Add selected drills and return to the Practice Builder."""
 
         for drill in drills:
             self.current_practice.add_activity(
-                phase,
+                block,
                 drill,
             )
 
@@ -340,11 +340,11 @@ class SoccerTrainingManager(ctk.CTk):
             return int(value)
         existing_drills = self.repositories.drills.get_all()
 
-        phase = get_phase_by_name(data["development_phase"])
+        block = get_block_by_name(data["development_block"])
 
-        if phase is None:
+        if block is None:
             raise ValueError(
-                f"Unknown development phase: {data['development_phase']}"
+                f"Unknown development block: {data['development_block']}"
             )
 
         drill_id = data.get("id")
@@ -368,7 +368,7 @@ class SoccerTrainingManager(ctk.CTk):
                 )
 
             drill.name = data["name"].strip()
-            drill.development_block_id = phase.id
+            drill.development_block_id = block.id
             drill.technical_focus_id = data.get(
                 "technical_focus_id"
             )
@@ -407,7 +407,7 @@ class SoccerTrainingManager(ctk.CTk):
             drill = Drill(
                 id=next_id,
                 name=data["name"].strip(),
-                development_block_id=phase.id,
+                development_block_id=block.id,
                 technical_focus_id=data.get(
                     "technical_focus_id"
                 ),
@@ -440,7 +440,7 @@ class SoccerTrainingManager(ctk.CTk):
         print(
             f"{action} drill: {drill.name} "
             f"(ID {drill.id}, "
-            f"phase ID {drill.development_block_id})"
+            f"block ID {drill.development_block_id})"
         )
 
         self.show_drill_manager()

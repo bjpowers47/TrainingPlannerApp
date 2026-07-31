@@ -134,7 +134,7 @@ def test_practice_activity_is_saved_and_loaded():
     )
 
     practice = Practice()
-    phase = practice.get_phase_names()[0]
+    phase = practice.get_block_names()[0]
 
     practice.add_activity(
         phase,

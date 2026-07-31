@@ -10,7 +10,7 @@ Purpose:
 """
 
 import customtkinter as ctk
-from app.models.player_development import DEVELOPMENT_PHASES
+from app.models.player_development import DEVELOPMENT_BLOCKS
 
 class DevelopmentLibraryPage(ctk.CTkFrame):
     """Development Library page."""
@@ -19,20 +19,20 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         self,
         parent,
         development_library_service,
-        selected_phase=None,
+        selected_block=None,
         add_to_practice_callback=None,
     ):
         super().__init__(parent)
 
         self.service = development_library_service
-        self.selected_phase = selected_phase
+        self.selected_block = selected_block
         self.add_to_practice_callback = add_to_practice_callback
 
         self.selected_block_id = None
         self.selected_drill_ids = set()
         self.current_drill = None
         self.practice_builder_mode = (
-            selected_phase is not None
+            selected_block is not None
             and add_to_practice_callback is not None
         )
 
@@ -199,10 +199,10 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
 
         self.details_box.delete("1.0", "end")
 
-        if self.selected_phase:
+        if self.selected_block:
             self.details_box.insert(
                 "end",
-                f"{self.selected_phase} Drills\n\n"
+                f"{self.selected_block} Drills\n\n"
                 "Select one or more drills.",
             )
         else:
@@ -214,39 +214,39 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
     def load_blocks(self):
         """Create the Development Phase buttons."""
 
-        for phase in DEVELOPMENT_PHASES:
+        for block in DEVELOPMENT_BLOCKS:
             button = ctk.CTkButton(
                 self.blocks_frame,
-                text=phase.name,
-                command=lambda selected_phase=phase: self.show_drills(selected_phase),
+                text=block.name,
+                command=lambda selected_block=block: self.show_drills(selected_block),
             )
             button.pack(fill="x", padx=5, pady=5)
-    def show_drills(self, phase):
+    def show_drills(self, block):
         """Display drills for the selected Practice Phase."""
 
-        if self.selected_block_id != phase.id:
+        if self.selected_block_id != block.id:
             self.selected_drill_ids.clear()
 
-        self.selected_phase = phase.name
-        self.selected_block_id = phase.id
+        self.selected_block = block.name
+        self.selected_block_id = block.id
 
         self.drills_title.configure(
-            text=f"{phase.name} Drills",
+            text=f"{block.name} Drills",
         )
 
         if self.practice_builder_mode:
             self.page_title.configure(
-                text=f"Select {phase.name} Drills",
+                text=f"Select {block.name} Drills",
             )
 
             self.submit_button.configure(
-                text=f"Add Selected {phase.name} Drills to Practice",
+                text=f"Add Selected {block.name} Drills to Practice",
             )
 
         for widget in self.drills_frame.winfo_children():
             widget.destroy()
 
-        drills = self.service.get_drills_for_block(phase.id)
+        drills = self.service.get_drills_for_block(block.id)
 
         if not drills:
             label = ctk.CTkLabel(
@@ -395,7 +395,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             return
 
         self.add_to_practice_callback(
-            self.selected_phase,
+            self.selected_block,
             selected_drills,
         )
     def configure_browse_mode(self):
@@ -416,28 +416,28 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
     def configure_practice_builder_mode(self):
         """Configure the page as a focused drill picker."""
 
-        phase = self.get_selected_phase_object()
+        block = self.get_selected_blcok_object()
 
-        if phase is None:
+        if block is None:
             self.show_welcome_message()
             return
 
         self.page_title.configure(
-            text=f"Select {phase.name} Drills",
+            text=f"Select {block.name} Drills",
         )
 
         self.drills_title.configure(
-            text=f"{phase.name} Drills",
+            text=f"{block.name} Drills",
         )
 
         self.submit_button.configure(
-            text=f"Add Selected {phase.name} Drills to Practice",
+            text=f"Add Selected {block.name} Drills to Practice",
         )
 
         # Hide the Practice Phase buttons.
         self.blocks_frame.grid_remove()
 
-        # Expand the drill list into the space previously used by phase buttons.
+        # Expand the drill list into the space previously used by block buttons.
         self.drills_container.grid_configure(
             column=0,
             columnspan=2,
@@ -448,12 +448,12 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             columnspan=2,
         )
 
-        self.show_drills(phase)
-    def get_selected_phase_object(self):
-        """Return the Development Phase matching the selected phase name."""
+        self.show_drills(block)
+    def get_selected_blcok_object(self):
+        """Return the Development Phase matching the selected block name."""
 
-        for phase in DEVELOPMENT_PHASES:
-            if phase.name == self.selected_phase:
-                return phase
+        for block in DEVELOPMENT_BLOCKS:
+            if block.name == self.selected_block:
+                return block
 
         return None

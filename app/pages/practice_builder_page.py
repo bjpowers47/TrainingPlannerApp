@@ -11,7 +11,7 @@ Purpose:
 
 import customtkinter as ctk
 from app.models.player_development import (
-    DEVELOPMENT_PHASES,
+    DEVELOPMENT_BLOCKS,
     get_display_name,
 )
 from app.widgets.practice_activity_row import PracticeActivityRow
@@ -30,9 +30,9 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         self.open_library_callback = open_library_callback
 
-        self.phases = [
-            f"{phase.icon} {phase.name}"
-            for phase in DEVELOPMENT_PHASES
+        self.blocks = [
+            f"{block.icon} {block.name}"
+            for block in DEVELOPMENT_BLOCKS
         ]
 
         self.build_ui()
@@ -52,7 +52,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
         self.build_title()
         self.build_practice_information()
         self.build_summary()
-        self.build_phase_sections()
+        self.build_block_sections()
 
         self.refresh_summary()
         
@@ -71,9 +71,9 @@ class PracticeBuilderPage(ctk.CTkFrame):
             padx=20,
             pady=(20, 10),
         )
-    def build_phase_sections(self):
-        self.phase_frame = ctk.CTkScrollableFrame(self)
-        self.phase_frame.grid(
+    def build_block_sections(self):
+        self.block_frame = ctk.CTkScrollableFrame(self)
+        self.block_frame.grid(
             row=4,
             column=0,
             sticky="nsew",
@@ -81,8 +81,8 @@ class PracticeBuilderPage(ctk.CTkFrame):
             pady=10,
         )
 
-        for phase in self.practice.get_phase_names():
-            section = ctk.CTkFrame(self.phase_frame)
+        for block in self.practice.get_block_names():
+            section = ctk.CTkFrame(self.block_frame)
             section.pack(
                 fill="x",
                 padx=10,
@@ -91,7 +91,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
             label = ctk.CTkLabel(
                 section,
-                text=get_display_name(phase),
+                text=get_display_name(block),
                 font=("Segoe UI", 22, "bold"),
                 text_color="yellow",
             )
@@ -111,28 +111,28 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 pady=(0, 10),
             )
 
-            activities = self.practice.get_activities(phase)
+            activities = self.practice.get_activities(block)
 
             if activities:
                 for activity in activities:
                     activity_row = PracticeActivityRow(
                         section,
                         activity=activity,
-                        move_up_callback=lambda selected_phase=phase, selected_activity=activity: (
+                        move_up_callback=lambda selected_block=block, selected_activity=activity: (
                             self.move_activity_up(
-                                selected_phase,
+                                selected_block,
                                 selected_activity,
                             )
                         ),
-                        move_down_callback=lambda selected_phase=phase, selected_activity=activity: (
+                        move_down_callback=lambda selected_block=block, selected_activity=activity: (
                             self.move_activity_down(
-                                selected_phase,
+                                selected_block,
                                 selected_activity,
                             )
                         ),
-                        remove_callback=lambda selected_phase=phase, selected_activity=activity: (
+                        remove_callback=lambda selected_block=block, selected_activity=activity: (
                             self.remove_activity(
-                                selected_phase,
+                                selected_block,
                                 selected_activity,
                             )
                         ),
@@ -159,9 +159,9 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
             browse_button = ctk.CTkButton(
                 section,
-                text=f"Browse {phase} Drills",
-                command=lambda selected_phase=phase: (
-                    self.browse_library(selected_phase)
+                text=f"Browse {block} Drills",
+                command=lambda selected_block=block: (
+                    self.browse_library(selected_block)
                 ),
             )
             browse_button.pack(
@@ -421,13 +421,13 @@ class PracticeBuilderPage(ctk.CTkFrame):
     # Navigation
     # ==========================================================
     
-    def browse_library(self, phase):
+    def browse_library(self, block):
             
-        """Open the Development Library for the selected phase."""
+        """Open the Development Library for the selected block."""
 
         self.update_practice_information()
 
-        self.open_library_callback(phase)
+        self.open_library_callback(block)
     # ==========================================================
     # Practice Information
     # ==========================================================
@@ -496,21 +496,21 @@ class PracticeBuilderPage(ctk.CTkFrame):
     # Activity Management
     # ==========================================================
     
-    def remove_activity(self, phase, activity):
+    def remove_activity(self, block, activity):
         """Remove an activity and refresh the Practice Builder."""
 
         self.practice.remove_activity(
-            phase,
+            block,
             activity,
         )
         
 
         self.refresh_page()
 
-    def move_activity_up(self, phase, activity):
-        """Move an activity one position earlier within its phase."""
+    def move_activity_up(self, block, activity):
+        """Move an activity one position earlier within its block."""
 
-        activities = self.practice.activities.get(phase, [])
+        activities = self.practice.activities.get(block, [])
 
         try:
             current_index = activities.index(activity)
@@ -526,10 +526,10 @@ class PracticeBuilderPage(ctk.CTkFrame):
         )
 
         self.refresh_page()
-    def move_activity_down(self, phase, activity):
-        """Move an activity one position later within its phase."""
+    def move_activity_down(self, block, activity):
+        """Move an activity one position later within its block."""
 
-        activities = self.practice.activities.get(phase, [])
+        activities = self.practice.activities.get(block, [])
 
         try:
             current_index = activities.index(activity)

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class DevelopmentPhase:
+class DevelopmentBlock:
     """Represents one phase of the Pyramid of Player Development."""
 
     id: int
@@ -21,7 +21,7 @@ class DevelopmentPhase:
     icon: str
     description: str
 
-BALL_MASTERY = DevelopmentPhase(
+BALL_MASTERY = DevelopmentBlock(
 id=1,
 name="Ball Mastery",
 icon="⚽",
@@ -31,6 +31,6 @@ description=(
     "develop a soft first touch and elite control."
 ),
 )
-DEVELOPMENT_PHASES = [
+DEVELOPMENT_BLOCKS = [
     BALL_MASTERY,
 ]

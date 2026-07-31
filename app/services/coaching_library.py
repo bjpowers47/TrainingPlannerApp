@@ -588,19 +588,19 @@ def get_all_coaching_focuses() -> list[TechnicalFocus]:
     return list(COACHING_FOCUSES)
 
 
-def get_coaching_focuses_by_phase(
-    development_phase_id: int,
+def get_coaching_focuses_by_block(
+    development_block_id: int,
 ) -> list[TechnicalFocus]:
     """Return the Coaching Focuses belonging to one Development Phase."""
 
     return [
         coaching_focus
         for coaching_focus in COACHING_FOCUSES
-        if coaching_focus.development_block_id == development_phase_id
+        if coaching_focus.development_block_id == development_block_id
         and coaching_focus.active
     ]
-def get_coaching_focus_names_by_phase(
-    development_phase_id: int,
+def get_coaching_focus_names_by_block(
+    development_build_id: int,
 ) -> list[str]:
     """
     Return the active Coaching Focus names for one Development Phase.
@@ -611,25 +611,25 @@ def get_coaching_focus_names_by_phase(
 
     return [
         coaching_focus.name
-        for coaching_focus in get_coaching_focuses_by_phase(
-            development_phase_id
+        for coaching_focus in get_coaching_focuses_by_block(
+            development_build_id
         )
     ]
 
 def get_coaching_focus_id_by_name(
     name: str,
-    development_phase_id: int,
+    development_block_id: int,
 ) -> int | None:
     """
     Return the ID of a Coaching Focus selected by name.
 
     The Development Phase ID prevents a focus from accidentally being
-    matched to the wrong phase.
+    matched to the wrong block.
     """
 
     coaching_focus = get_coaching_focus_by_name(
         name=name,
-        development_phase_id=development_phase_id,
+        development_block_id=development_block_id,
     )
 
     if coaching_focus is None:
@@ -651,13 +651,13 @@ def get_coaching_focus_by_id(
 
 def get_coaching_focus_by_name(
     name: str,
-    development_phase_id: int | None = None,
+    development_block_id: int | None = None,
 ) -> TechnicalFocus | None:
     """
     Find an active Coaching Focus by name.
 
     When a Development Phase ID is provided, the lookup is restricted
-    to that phase.
+    to that block.
     """
 
     cleaned_name = name.strip().casefold()
@@ -667,9 +667,9 @@ def get_coaching_focus_by_name(
             continue
 
         if (
-            development_phase_id is not None
+            development_block_id is not None
             and coaching_focus.development_block_id
-            != development_phase_id
+            != development_block_id
         ):
             continue
 
@@ -677,8 +677,8 @@ def get_coaching_focus_by_name(
             return coaching_focus
 
     return None
-def get_coaching_focus_names_by_phase(
-    development_phase_id: int,
+def get_coaching_focus_names_by_block(
+    development_block_id: int,
 ) -> list[str]:
     """
     Return only the names of Coaching Focuses
@@ -688,8 +688,8 @@ def get_coaching_focus_names_by_phase(
     return sorted(
         [
             focus.name
-            for focus in get_coaching_focuses_by_phase(
-                development_phase_id
+            for focus in get_coaching_focuses_by_block(
+                development_block_id
             )
         ]
     )
