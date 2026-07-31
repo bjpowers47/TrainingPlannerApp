@@ -95,7 +95,7 @@ class Practice:
 
         for activities in self.activities.values():
             for activity in activities:
-                total += activity.calculated_duration_minutes()
+                total += activity.duration_minutes()
 
         return round(total)
     def save_to_json(self, filename: str) -> None:

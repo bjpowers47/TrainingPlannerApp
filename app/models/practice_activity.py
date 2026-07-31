@@ -27,10 +27,10 @@ class PracticeActivity:
     drill: Drill
 
     manual_duration_minutes: int | None = None
-    sets: int | None = None
+    sets: int = 1
     reps: str = ""
-    work_seconds: int | None = None
-    rest_seconds: int | None = None
+    work_seconds: int = 0
+    rest_seconds: int = 0
 
     coach_notes: str = ""
 
@@ -58,29 +58,11 @@ class PracticeActivity:
 
         return self.drill.name
     def duration_seconds(self) -> int:
-        """
-        Return the activity duration in seconds.
-
-        Interval activities are calculated from sets, work, and rest.
-        There is no rest period after the final set.
-
-        Activities without interval values use the manually entered duration.
-        """
-
-        sets = self.sets or 0
         work_seconds = self.work_seconds or 0
         rest_seconds = self.rest_seconds or 0
+        sets = self.sets or 1
 
-        if sets > 0 and work_seconds > 0:
-            total_work = sets * work_seconds
-            total_rest = max(sets - 1, 0) * rest_seconds
+        return sets * (work_seconds + rest_seconds)
 
-            return total_work + total_rest
-
-        return (self.manual_duration_minutes or 0) * 60
-
-
-    def calculated_duration_minutes(self) -> float:
-        """Return the calculated duration in minutes."""
-
+    def duration_minutes(self) -> float:
         return self.duration_seconds() / 60

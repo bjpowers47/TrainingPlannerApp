@@ -40,7 +40,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         self.move_down_callback = move_down_callback
         self.remove_callback = remove_callback
         self.activity_changed_callback = activity_changed_callback
-        duration = activity.calculated_duration_minutes()
+        duration = activity.duration_minutes()
         duration_text = (
             str(int(duration))
             if duration.is_integer()
@@ -297,7 +297,7 @@ class PracticeActivityRow(ctk.CTkFrame):
     def refresh_duration(self) -> None:
         """Recalculate and display the activity duration."""
 
-        duration = self.activity.calculated_duration_minutes()
+        duration = self.activity.duration_minutes()
 
         duration_text = (
             str(int(duration))
