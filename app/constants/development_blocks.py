@@ -3,7 +3,7 @@ Coach's Training Manager
 ------------------------
 
 Module:
-    development_phases.py
+    development_blocks.py
 
 Purpose:
     Defines the Pyramid of Player Development.

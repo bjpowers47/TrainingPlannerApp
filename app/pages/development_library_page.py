@@ -21,12 +21,14 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         development_library_service,
         selected_block=None,
         add_to_practice_callback=None,
+        cancel_callback=None,
     ):
         super().__init__(parent)
 
         self.service = development_library_service
         self.selected_block = selected_block
         self.add_to_practice_callback = add_to_practice_callback
+        self.cancel_callback = cancel_callback
 
         self.selected_block_id = None
         self.selected_drill_ids = set()
@@ -73,7 +75,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             self.blocks_frame,
-            text="Practice Phases",
+            text="Practice Blocks",
             font=("Segoe UI", 18, "bold"),
         ).pack(
             anchor="w",
@@ -114,6 +116,20 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         self.submit_button.grid(
             row=2,
             column=1,
+            sticky="ew",
+            padx=10,
+            pady=(0, 10),
+        )       
+        self.cancel_button = ctk.CTkButton(
+            self,
+            text="Cancel",
+            command=self.cancel_selection,
+            fg_color="gray",
+        )
+
+        self.cancel_button.grid(
+            row=2,
+            column=0,
             sticky="ew",
             padx=10,
             pady=(0, 10),
@@ -209,10 +225,10 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             self.details_box.insert(
                 "end",
                 "Development Library\n\n"
-                "Select a Practice Phase.",
+                "Select a Practice Block.",
             )
     def load_blocks(self):
-        """Create the Development Phase buttons."""
+        """Create the Development Block buttons."""
 
         for block in DEVELOPMENT_BLOCKS:
             button = ctk.CTkButton(
@@ -222,7 +238,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             )
             button.pack(fill="x", padx=5, pady=5)
     def show_drills(self, block):
-        """Display drills for the selected Practice Phase."""
+        """Display drills for the selected Practice Block."""
 
         if self.selected_block_id != block.id:
             self.selected_drill_ids.clear()
@@ -251,7 +267,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         if not drills:
             label = ctk.CTkLabel(
                 self.drills_frame,
-                text="No drills found for this Practice Phase.",
+                text="No drills found for this Practice Block.",
             )
             label.pack(
                 anchor="w",
@@ -277,8 +293,8 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
                 row,
                 text="",
                 width=30,
-                command=lambda drill_id=drill.id: (
-                    self.toggle_drill_selection(drill_id)
+                command=lambda selected_drill=drill: (
+                    self.toggle_drill_selection(selected_drill)
                 ),
             )
             checkbox.pack(
@@ -298,13 +314,15 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             expand=True,
             padx=5,
         )
-    def toggle_drill_selection(self, drill_id):
-        """Add or remove a drill from the current selection."""
+    def toggle_drill_selection(self, drill):
+        """Toggle a drill and display its details in the shared sidebar."""
 
-        if drill_id in self.selected_drill_ids:
-            self.selected_drill_ids.remove(drill_id)
+        if drill.id in self.selected_drill_ids:
+            self.selected_drill_ids.remove(drill.id)
         else:
-            self.selected_drill_ids.add(drill_id)
+            self.selected_drill_ids.add(drill.id)
+
+        self.show_drill_details(drill)
     def show_drill_details(self, drill):
         """Display the selected drill's information."""
 
@@ -411,12 +429,13 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
 
         # The sidebar library is for browsing, not adding drills.
         self.submit_button.grid_remove()
-
+        self.cancel_button.grid_remove()
         self.show_welcome_message()
+
     def configure_practice_builder_mode(self):
         """Configure the page as a focused drill picker."""
 
-        block = self.get_selected_blcok_object()
+        block = self.get_selected_block_object()
 
         if block is None:
             self.show_welcome_message()
@@ -434,7 +453,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             text=f"Add Selected {block.name} Drills to Practice",
         )
 
-        # Hide the Practice Phase buttons.
+        # Hide the Practice Block buttons.
         self.blocks_frame.grid_remove()
 
         # Expand the drill list into the space previously used by block buttons.
@@ -449,8 +468,15 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         )
 
         self.show_drills(block)
-    def get_selected_blcok_object(self):
-        """Return the Development Phase matching the selected block name."""
+
+    def cancel_selection(self) -> None:
+        """Return to the Practice Builder without adding drills."""
+
+        if self.cancel_callback is not None:
+            self.cancel_callback()  
+
+    def get_selected_block_object(self):
+        """Return the Development Block matching the selected block name."""
 
         for block in DEVELOPMENT_BLOCKS:
             if block.name == self.selected_block:

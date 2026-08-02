@@ -10,9 +10,10 @@ Purpose:
 """
 
 import customtkinter as ctk
+from tkinter import messagebox
 from app.models.player_development import (
     DEVELOPMENT_BLOCKS,
-    get_display_name,
+    get_display_name
 )
 from app.widgets.practice_activity_row import PracticeActivityRow
 
@@ -23,17 +24,13 @@ class PracticeBuilderPage(ctk.CTkFrame):
     # Initialization
     # ==========================================================
 
-    def __init__(self, parent, practice, open_library_callback):
+    def __init__(self, parent, practice, open_library_callback, export_pdf_callback=None):
         super().__init__(parent)
 
         self.practice = practice
 
         self.open_library_callback = open_library_callback
-
-        self.blocks = [
-            f"{block.icon} {block.name}"
-            for block in DEVELOPMENT_BLOCKS
-        ]
+        self.export_pdf_callback = export_pdf_callback
 
         self.build_ui()
         self.refresh_summary()
@@ -59,18 +56,26 @@ class PracticeBuilderPage(ctk.CTkFrame):
     def build_title(self):
         """Build the Practice Builder title."""
 
+        title_frame = ctk.CTkFrame(self, fg_color="transparent")
+        title_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 10))
+        title_frame.grid_columnconfigure(0, weight=1)
         self.title_label = ctk.CTkLabel(
-            self,
+            title_frame,
             text="Practice Builder",
             font=("Segoe UI", 28, "bold"),
         )
-        self.title_label.grid(
-            row=0,
-            column=0,
-            sticky="w",
-            padx=20,
-            pady=(20, 10),
-        )
+        self.title_label.grid(row=0, column=0, sticky="w")
+        ctk.CTkButton(
+            title_frame,
+            text="Save Practice as PDF",
+            command=self.save_as_pdf,
+        ).grid(row=0, column=1, sticky="e")
+
+    def save_as_pdf(self):
+        """Capture current values and request a PDF export."""
+        self.update_practice_information()
+        if self.export_pdf_callback is not None:
+            self.export_pdf_callback(self.practice)
     def build_block_sections(self):
         self.block_frame = ctk.CTkScrollableFrame(self)
         self.block_frame.grid(
@@ -80,6 +85,8 @@ class PracticeBuilderPage(ctk.CTkFrame):
             padx=20,
             pady=10,
         )
+
+        self.build_warm_up_section()
 
         for block in self.practice.get_block_names():
             section = ctk.CTkFrame(self.block_frame)
@@ -169,6 +176,40 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 padx=25,
                 pady=(8, 12),
             )
+
+    def build_warm_up_section(self):
+        """Build the fixed warm-up section shown before development blocks."""
+        section = ctk.CTkFrame(self.block_frame)
+        section.pack(fill="x", padx=10, pady=8)
+
+        ctk.CTkLabel(
+            section,
+            text="Warm Up",
+            font=("Segoe UI", 22, "bold"),
+            text_color="yellow",
+        ).pack(anchor="w", padx=15, pady=(12, 4))
+
+        separator = ctk.CTkFrame(section, height=2)
+        separator.pack(fill="x", padx=15, pady=(0, 10))
+
+        duration_frame = ctk.CTkFrame(section, fg_color="transparent")
+        duration_frame.pack(anchor="w", padx=25, pady=(0, 12))
+        ctk.CTkLabel(duration_frame, text="Warm-up duration:").pack(side="left")
+
+        self.warm_up_duration_var = ctk.StringVar(
+            value=str(self.practice.warm_up_minutes)
+        )
+        self.warm_up_duration_entry = ctk.CTkEntry(
+            duration_frame,
+            width=60,
+            textvariable=self.warm_up_duration_var,
+            justify="center",
+        )
+        self.warm_up_duration_entry.pack(side="left", padx=(8, 6))
+        self.warm_up_duration_entry.bind(
+            "<KeyRelease>", lambda _event: self.save_warm_up_duration()
+        )
+        ctk.CTkLabel(duration_frame, text="min").pack(side="left")
 
     def build_summary(self):
         """Build the complete Practice Summary section."""
@@ -432,10 +473,11 @@ class PracticeBuilderPage(ctk.CTkFrame):
     # Practice Information
     # ==========================================================
     
-    def update_practice_information(self):
+    def update_practice_information(self) -> None:
         """Copy the Practice Information controls into the Practice model."""
 
-        self.practice.name = self.name_entry.get().strip()
+        practice_name = self.name_entry.get().strip()
+        self.practice.name = practice_name
 
         self.practice.practice_date = (
             self.date_entry.get().strip()
@@ -451,6 +493,35 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 "end",
             ).strip()
         )
+        self.save_warm_up_duration()
+
+    def save_warm_up_duration(self) -> None:
+        """Copy a valid non-negative warm-up duration into the practice."""
+        text = self.warm_up_duration_var.get().strip()
+        if text == "":
+            self.practice.warm_up_minutes = 0
+        else:
+            try:
+                minutes = int(text)
+            except ValueError:
+                return
+            if minutes < 0:
+                return
+            self.practice.warm_up_minutes = minutes
+        self.refresh_summary()
+
+    def validate_practice_name(self) -> bool:
+        """Require a name before a practice can be saved."""
+
+        if self.practice.name:
+            return True
+
+        messagebox.showwarning(
+            "Practice Name Required",
+            "Enter a practice name before saving this practice.",
+        )
+        self.name_entry.focus_set()
+        return False
 
     # ==========================================================
     # Practice Summary
@@ -471,6 +542,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         summary_text = (
             f"Activities: {activity_count}   |  "
+            f"Warm Up: {self.practice.warm_up_minutes} min   |  "
             f"Planned: {planned_minutes} min   |   "
             f"Target: {target_minutes} min   |   "
             f"Remaining: {remaining_minutes} min"

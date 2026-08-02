@@ -49,6 +49,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         self.duration_var = self._make_value_var(duration_text)
         self.sets_var = self._make_value_var(activity.sets)
         self.reps_var = self._make_value_var(activity.reps)
+        self.coach_notes_var = self._make_value_var(activity.coach_notes)
         self.work_var = self._make_value_var(activity.work_seconds)
         self.rest_var = self._make_value_var(activity.rest_seconds)
         
@@ -168,13 +169,20 @@ class PracticeActivityRow(ctk.CTkFrame):
         self._build_value_field(
             execution_frame,
             column=3,
+            label="Note",
+            variable=self.coach_notes_var,
+            width=180,
+        )
+        self._build_value_field(
+            execution_frame,
+            column=4,
             label="Work",
             variable=self.work_var,
             suffix="sec",
         )
         self._build_value_field(
             execution_frame,
-            column=4,
+            column=5,
             label="Rest",
             variable=self.rest_var,
             suffix="sec",
@@ -187,6 +195,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         label: str,
         variable: ctk.StringVar,
         suffix: str = "",
+        width: int = 54,
     ) -> None:
         """Build one labeled execution entry."""
 
@@ -212,7 +221,7 @@ class PracticeActivityRow(ctk.CTkFrame):
 
         entry = ctk.CTkEntry(
             field_frame,
-            width=54,
+            width=width,
             textvariable=variable,
             justify="center",
         )
@@ -241,6 +250,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         bindings = (
             (self.sets_var, "sets"),
             (self.reps_var, "reps"),
+            (self.coach_notes_var, "coach_notes"),
             (self.work_var, "work_seconds"),
             (self.rest_var, "rest_seconds"),
         )
@@ -261,9 +271,10 @@ class PracticeActivityRow(ctk.CTkFrame):
 
         text = variable.get().strip()
 
-        # Reps is free-form coaching text.
         if attribute_name == "reps":
             value = text[:20]
+        elif attribute_name == "coach_notes":
+            value = text[:200]
 
         else:
             if text == "":

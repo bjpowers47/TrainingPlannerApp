@@ -54,39 +54,34 @@ def get_block_names() -> list[str]:
     return [block.name for block in DEVELOPMENT_BLOCKS]
 
 
-def get_block_by_id(block_id: int) -> DevelopmentBlock:
+def get_block_by_id(
+    block_id: int,
+) -> DevelopmentBlock | None:
+    """Return the Development Block with the matching ID."""
+
     for block in DEVELOPMENT_BLOCKS:
         if block.id == block_id:
-            return block
-
-    raise ValueError(
-        f"Unknown development block ID: {block_id}"
-    )
-
-
-def get_block_by_name(name: str) -> DevelopmentBlock | None:
-    """Find a development block by its plain or display name."""
-
-    clean_name = name.strip()
-
-    for block in DEVELOPMENT_BLOCKS:
-        display_name = f"{block.icon} {block.name}"
-
-        if clean_name.casefold() in {
-            block.name.casefold(),
-            display_name.casefold(),
-        }:
             return block
 
     return None
 
 
-def get_display_name(name: str) -> str:
-    """Return the icon and name used by the user interface."""
+def get_block_by_name(
+    block_name: str,
+) -> DevelopmentBlock | None:
+    for block in DEVELOPMENT_BLOCKS:
+        if block.name == block_name:
+            return block
 
-    block = get_block_by_name(name)
+    return None
+
+
+def get_display_name(block_name: str) -> str:
+    """Return the icon and name used in the interface."""
+
+    block = get_block_by_name(block_name)
 
     if block is None:
-        raise ValueError(f"Unknown development block: {name}")
+        return block_name
 
     return f"{block.icon} {block.name}"

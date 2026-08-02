@@ -81,7 +81,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             pady=10,
         )
 
-        for block in self.practice.get_block_names():
+        for block in self.practice.get_blockPracticeBuilderPagePracticeBuilderPage_names():
             section = ctk.CTkFrame(self.block_frame)
             section.pack(
                 fill="x",

@@ -22,10 +22,11 @@ from app.models.practice_activity import PracticeActivity
 class Practice:
     """Represents a single practice."""
 
-    name: str = "Untitled Practice"
+    name: str = ""
     practice_date: str = ""
     team_name: str = ""
     objective: str = ""
+    warm_up_minutes: int = 0
 
     activities: dict[str, list[PracticeActivity]] = field(
         default_factory=lambda: {
@@ -91,7 +92,7 @@ class Practice:
     def total_duration(self) -> int:
         """Return the total planned practice duration in minutes."""
 
-        total = 0
+        total = max(0, self.warm_up_minutes)
 
         for activities in self.activities.values():
             for activity in activities:
@@ -108,6 +109,7 @@ class Practice:
             "practice_date": self.practice_date,
             "team_name": self.team_name,
             "objective": self.objective,
+            "warm_up_minutes": self.warm_up_minutes,
             "activities": {},
         }
 
@@ -142,7 +144,7 @@ class Practice:
         practice = cls(
             name=practice_data.get(
                 "name",
-                "Untitled Practice",
+                "",
             ),
             practice_date=practice_data.get(
                 "practice_date",
@@ -156,6 +158,7 @@ class Practice:
                 "objective",
                 "",
             ),
+            warm_up_minutes=max(0, int(practice_data.get("warm_up_minutes", 0) or 0)),
         )
 
         saved_activities = practice_data.get(
@@ -177,9 +180,6 @@ class Practice:
 
                     activity = PracticeActivity(
                         drill=drill,
-                        manual_duration_minutes=activity_data.get(
-                            "duration_minutes"
-                        ),
                         sets=activity_data.get("sets"),
                         reps=activity_data.get(
                             "reps",
@@ -196,23 +196,6 @@ class Practice:
                             "",
                         ),
                     )
-
-                    if (
-                        "duration_minutes" not in activity_data
-                        and "duration_override" in activity_data
-                    ):
-                        duration_override = activity_data.get(
-                            "duration_override"
-                        )
-
-                        if duration_override is None:
-                            activity.manual_duration_minutes = (
-                                drill.duration_minutes
-                            )
-                        else:
-                            activity.manual_duration_minutes = (
-                                duration_override
-                            )
 
                 else:
                     drill = Drill(**activity_data)

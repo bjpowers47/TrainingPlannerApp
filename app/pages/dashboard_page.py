@@ -27,7 +27,7 @@ class DashboardPage(ctk.CTkFrame):
 
         self.info.insert(
             "end",
-            "Welcome to Soccer Training Manager\n\n"
+            "Welcome to Training Manager\n\n"
             "Version 0.2\n\n"
             "Load an Excel workbook to begin."
         )

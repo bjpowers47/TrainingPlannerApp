@@ -1,20 +1,34 @@
+import sqlite3
+from datetime import date
+
 import customtkinter as ctk
-from tkinter import filedialog
+from PIL import Image
+from tkinter import PhotoImage, TclError, filedialog, messagebox
 
 from .config import ConfigManager
 from .workbook import WorkbookManager
 from app.widgets.session_table import SessionTable
 from app.repositories.repository_manager import RepositoryManager
-from app.services.sample_development_library import load_sample_drills
 from app.services.development_library_service import DevelopmentLibraryService
 from app.pages.development_library_page import DevelopmentLibraryPage
 from app.pages.practice_builder_page import PracticeBuilderPage
 from app.pages.administration_page import AdministrationPage
 from app.pages.drill_manager_page import DrillManagerPage
 from app.models.practice import Practice
-from app.models.player_development import get_block_by_name
+from app.models.player_development import (
+    get_block_by_id,
+    get_block_by_name,
+)
 from app.pages.drill_editor_page import DrillEditorPage
 from app.models.drill import Drill
+from app.services.drill_spreadsheet_service import (
+    create_template,
+    export_spreadsheet,
+    import_spreadsheet,
+)
+from app.config import BACKUP_DIR, RESOURCE_ROOT, ROOT
+from app.services.database_maintenance_service import DatabaseMaintenanceService
+from app.services.practice_pdf_service import export_practice_pdf
 
 class SoccerTrainingManager(ctk.CTk):
 # ==========================================================
@@ -27,19 +41,35 @@ class SoccerTrainingManager(ctk.CTk):
         self.config_manager = ConfigManager()
         self.workbook = WorkbookManager()
         self.repositories = RepositoryManager()
-        load_sample_drills(self.repositories)
         self.development_library_service = DevelopmentLibraryService(
             self.repositories.drills
         )
+        self.database_maintenance = DatabaseMaintenanceService(
+            ROOT / "data" / "coach_training.db",
+            BACKUP_DIR,
+        )
 
         self.current_practice = Practice()
-        self.title("Soccer Training Manager")
+        self.title("Training Manager")
         self.geometry("1400x900")
+        self.logo_path = (
+            RESOURCE_ROOT / "assets" / "images" / "training_manager_logo.png"
+        )
+        self._set_window_icon()
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
         self.build_ui()
+
+    def _set_window_icon(self):
+        """Use the Training Manager logo as the native window icon."""
+        try:
+            self.window_icon = PhotoImage(file=str(self.logo_path))
+            self.iconphoto(True, self.window_icon)
+        except (OSError, TclError):
+            self.window_icon = None
+
     def build_ui(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -50,10 +80,17 @@ class SoccerTrainingManager(ctk.CTk):
         self.content = ctk.CTkFrame(self)
         self.content.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
 
+        self.sidebar_logo = ctk.CTkImage(
+            light_image=Image.open(self.logo_path),
+            dark_image=Image.open(self.logo_path),
+            size=(52, 52),
+        )
         title = ctk.CTkLabel(
             self.sidebar,
-            text="⚽ Soccer Training Manager",
-            font=("Segoe UI", 18, "bold")
+            text="Training Manager",
+            image=self.sidebar_logo,
+            compound="left",
+            font=("Segoe UI", 18, "bold"),
         )
         title.pack(pady=20)
 
@@ -61,12 +98,6 @@ class SoccerTrainingManager(ctk.CTk):
             self.sidebar,
             text="Dashboard",
             command=self.show_dashboard
-        ).pack(fill="x", padx=10, pady=5)
-
-        ctk.CTkButton(
-            self.sidebar,
-            text="Training",
-            command=self.show_training
         ).pack(fill="x", padx=10, pady=5)
 
         ctk.CTkButton(
@@ -151,7 +182,7 @@ class SoccerTrainingManager(ctk.CTk):
 
         self.info.insert(
             "end",
-            "Welcome to Soccer Training Manager\n\n"
+            "Welcome to Training Manager\n\n"
             "Version 0.2.1\n\n"
             "Load an Excel workbook to begin."
         )
@@ -195,6 +226,7 @@ class SoccerTrainingManager(ctk.CTk):
             self.content,
             self.current_practice,
             self.show_development_library_for_block,
+            self.save_practice_pdf,
         )
         self.practice_builder_page.pack(
             fill="both",
@@ -229,6 +261,7 @@ class SoccerTrainingManager(ctk.CTk):
             self.development_library_service,
             selected_block=block,
             add_to_practice_callback=self.add_drills_to_practice,
+            cancel_callback=self.show_practice_builder,
         )
 
         page.pack(fill="both", expand=True)
@@ -273,6 +306,8 @@ class SoccerTrainingManager(ctk.CTk):
             return
 
         self.practice_builder_page.update_practice_information()
+        if not self.practice_builder_page.validate_practice_name():
+            return
 
         filename = filedialog.asksaveasfilename(
             title="Save Practice",
@@ -288,6 +323,36 @@ class SoccerTrainingManager(ctk.CTk):
 
         self.current_practice.save_to_json(filename)
 
+    def save_practice_pdf(self, practice):
+        """Ask for a PDF destination and export the current practice plan."""
+        safe_name = "".join(
+            character if character.isalnum() or character in ("-", "_") else "_"
+            for character in (practice.name.strip() or "practice_plan")
+        ).strip("_") or "practice_plan"
+        filename = filedialog.asksaveasfilename(
+            title="Save Practice Plan as PDF",
+            initialfile=f"{safe_name}_{date.today().isoformat()}.pdf",
+            defaultextension=".pdf",
+            filetypes=[("PDF Document", "*.pdf")],
+        )
+        if not filename:
+            self.status.configure(text="PDF export canceled")
+            return
+        try:
+            export_practice_pdf(filename, practice)
+        except Exception as error:
+            self.status.configure(text="PDF export failed")
+            messagebox.showerror(
+                "PDF Export Failed",
+                f"The practice PDF could not be created.\n\n{error}",
+            )
+            return
+        self.status.configure(text=f"PDF saved: {filename}")
+        messagebox.showinfo(
+            "Practice PDF Saved",
+            f"The practice plan was saved successfully.\n\n{filename}",
+        )
+
 # ==========================================================
 # Administration
 # ==========================================================
@@ -300,10 +365,141 @@ class SoccerTrainingManager(ctk.CTk):
         page = AdministrationPage(
             self.content,
             open_drill_manager_callback=self.show_drill_manager,
+            create_template_callback=self.create_drill_template,
+            import_spreadsheet_callback=self.import_drill_spreadsheet,
+            export_spreadsheet_callback=self.export_drill_spreadsheet,
+            database_maintenance_callback=self.run_database_maintenance,
+            restore_database_callback=self.restore_database_backup,
         )
         page.pack(
             fill="both",
             expand=True,
+        )
+
+    def run_database_maintenance(self):
+        """Check database health, then offer backup and optimization."""
+        try:
+            status = self.database_maintenance.check_health()
+        except (OSError, sqlite3.DatabaseError) as error:
+            messagebox.showerror("Database Maintenance", str(error))
+            return
+
+        if not status.is_healthy:
+            messagebox.showerror(
+                "Database Maintenance",
+                f"The integrity check reported: {status.integrity}\n\n"
+                "Optimization was not run.",
+            )
+            return
+
+        proceed = messagebox.askyesno(
+            "Database Maintenance",
+            "Database health: Good\n"
+            f"Tables: {status.table_count}\n"
+            f"Size: {status.size_bytes / (1024 * 1024):.2f} MB\n\n"
+            "Create a backup and optimize the database now?",
+        )
+        if not proceed:
+            return
+
+        try:
+            backup_path = self.database_maintenance.create_backup()
+            bytes_saved = self.database_maintenance.optimize()
+        except (OSError, sqlite3.DatabaseError) as error:
+            messagebox.showerror("Database Maintenance", str(error))
+            return
+
+        messagebox.showinfo(
+            "Database Maintenance",
+            "Maintenance completed successfully.\n\n"
+            f"Backup: {backup_path.name}\n"
+            f"Space recovered: {bytes_saved / 1024:.1f} KB",
+        )
+
+    def restore_database_backup(self):
+        """Select, validate, and restore a database backup."""
+        filename = filedialog.askopenfilename(
+            title="Restore Database Backup",
+            initialdir=BACKUP_DIR,
+            filetypes=[("SQLite Database Backup", "*.db"), ("All Files", "*.*")],
+        )
+        if not filename:
+            return
+
+        try:
+            status = self.database_maintenance.validate_backup(filename)
+        except (OSError, sqlite3.DatabaseError) as error:
+            messagebox.showerror("Restore Database", str(error))
+            return
+
+        confirmed = messagebox.askyesno(
+            "Restore Database",
+            "The selected backup is healthy.\n"
+            f"Tables: {status.table_count}\n"
+            f"Size: {status.size_bytes / (1024 * 1024):.2f} MB\n\n"
+            "Restore it now? The current database will be backed up first.",
+        )
+        if not confirmed:
+            return
+
+        try:
+            safety_backup = self.database_maintenance.restore_backup(filename)
+        except (OSError, sqlite3.DatabaseError) as error:
+            messagebox.showerror("Restore Database", str(error))
+            return
+
+        messagebox.showinfo(
+            "Restore Database",
+            "The database was restored successfully.\n\n"
+            f"Previous database backup: {safety_backup.name}\n\n"
+            "Please restart the application before continuing.",
+        )
+
+    def create_drill_template(self):
+        filename = filedialog.asksaveasfilename(
+            title="Create Drill Import Template",
+            defaultextension=".xlsx",
+            filetypes=[("Excel Workbook", "*.xlsx")],
+        )
+        if filename:
+            create_template(filename)
+            messagebox.showinfo("Template Created", "The drill import template is ready.")
+
+    def import_drill_spreadsheet(self):
+        filename = filedialog.askopenfilename(
+            title="Import Drill Spreadsheet",
+            filetypes=[("Excel Workbook", "*.xlsx")],
+        )
+        if not filename:
+            return
+        report = import_spreadsheet(filename, self.repositories.drills)
+        lines = [f"Imported: {report.imported}"]
+        if report.duplicates:
+            lines.append(f"Duplicates skipped: {len(report.duplicates)}")
+        if report.errors:
+            lines.append(f"Errors: {len(report.errors)}")
+        messagebox.showinfo("Drill Import Report", "\n".join(lines))
+
+    def export_drill_spreadsheet(self):
+        filename = filedialog.asksaveasfilename(
+            title="Export Active Drills",
+            initialfile=f"soccer_drills_{date.today().isoformat()}.xlsx",
+            defaultextension=".xlsx",
+            filetypes=[("Excel Workbook", "*.xlsx")],
+        )
+        if not filename:
+            return
+        try:
+            exported = export_spreadsheet(filename, self.repositories.drills)
+        except Exception as error:
+            messagebox.showerror(
+                "Drill Export Failed",
+                f"The spreadsheet could not be created.\n\n{error}",
+            )
+            return
+        messagebox.showinfo(
+            "Drill Export Complete",
+            f"Exported {exported} active drill(s).\n\n{filename}",
         )
     def show_drill_manager(self):
 
@@ -340,11 +536,14 @@ class SoccerTrainingManager(ctk.CTk):
             return int(value)
         existing_drills = self.repositories.drills.get_all()
 
-        block = get_block_by_name(data["development_block"])
+        block = get_block_by_id(
+            data["development_block_id"]
+        )
 
         if block is None:
             raise ValueError(
-                f"Unknown development block: {data['development_block']}"
+                "Unknown development block ID: "
+                f"{data['development_block_id']}"
             )
 
         drill_id = data.get("id")
@@ -462,3 +661,9 @@ class SoccerTrainingManager(ctk.CTk):
         self.status.configure(text=f"Loaded: {filename}")
 
         self.show_training()
+    def cancel_selection(self) -> None:
+        """Return to the Practice Builder without adding drills."""
+
+        if self.cancel_callback is not None:
+            self.cancel_callback()  
+

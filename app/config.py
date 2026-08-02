@@ -1,15 +1,17 @@
 from pathlib import Path
 import json
+import sys
 
-APP_NAME = "Soccer Training Manager"
+APP_NAME = "Training Manager"
 
-ROOT = Path(__file__).parent.parent
+RESOURCE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).parent.parent))
+ROOT = Path(sys.executable).parent if getattr(sys, "frozen", False) else RESOURCE_ROOT
 
 CONFIG_DIR = ROOT / "data"
-CONFIG_DIR.mkdir(exist_ok=True)
+CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
 BACKUP_DIR = ROOT / "backups"
-BACKUP_DIR.mkdir(exist_ok=True)
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 CONFIG_FILE = CONFIG_DIR / "config.json"
 

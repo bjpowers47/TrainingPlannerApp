@@ -6,7 +6,7 @@ from app.services.coaching_library import (
     get_coaching_focus_id_by_name,
     get_coaching_focus_names_by_block,
 )
-
+from tkinter import messagebox
 
 class DrillEditorPage(ctk.CTkFrame):
     """Page used to create or edit a drill."""
@@ -97,9 +97,9 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(0, 18),
         )
 
-        self._add_label("Development Phase", row=2, column=0)
+        self._add_label("Development Block", row=2, column=0)
 
-        self.block_prompt = "Select Development Phase"
+        self.block_prompt = "Select Development Block"
 
         self.block_lookup = {
             f"{block.icon} {block.name}": block
@@ -131,7 +131,7 @@ class DrillEditorPage(ctk.CTkFrame):
             column=1,
         )
 
-        self.focus_prompt = "Select Development Phase First"
+        self.focus_prompt = "Select Development Block First"
 
         self.focus_menu = ctk.CTkOptionMenu(
             self.form,
@@ -345,7 +345,7 @@ class DrillEditorPage(ctk.CTkFrame):
         )
 
     def _block_changed(self, selected_block_name):
-        """Load the Coaching Focuses for the selected Development Phase."""
+        """Load the Coaching Focuses for the selected Development Block."""
 
         selected_block = self.block_lookup.get(selected_block_name)
 
@@ -445,6 +445,12 @@ class DrillEditorPage(ctk.CTkFrame):
                     name=selected_focus_name,
                     development_block_id=development_block_id,
                 )
+        if development_block_id is None:
+            messagebox.showwarning(
+                "Development Block Required",
+                "Please select a Development Block.",
+            )
+            return
 
         sets = self.sets_entry.get().strip()
         reps = self.reps_entry.get().strip()
@@ -459,16 +465,11 @@ class DrillEditorPage(ctk.CTkFrame):
                 rest_seconds,
             )
         )
-
+        
         drill_data = {
             "name": self.name_entry.get().strip(),
             "development_block_id": development_block_id,
             "technical_focus_id": technical_focus_id,
-            "development_block": (
-                selected_block.name
-                if selected_block is not None
-                else ""
-            ),
             "technical_focus": (
                 selected_focus_name
                 if selected_focus_name != "Not selected"

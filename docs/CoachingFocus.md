@@ -3,7 +3,7 @@ Coaching Focus Specification v1.0
 Required
 ---------
 ✓ Name
-✓ Development Phase
+✓ Development Block
 ✓ Purpose
 ✓ Description
 

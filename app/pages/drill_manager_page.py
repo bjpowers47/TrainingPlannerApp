@@ -50,7 +50,7 @@ class DrillManagerPage(ctk.CTkFrame):
     def populate(self):
         """Load drills from the service and display them."""
 
-        grouped = self.drill_service.get_drills_by_phase()
+        grouped = self.drill_service.get_drills_by_block()
 
         for block in DEVELOPMENT_BLOCKS:
             drills = grouped.get(block.id, [])

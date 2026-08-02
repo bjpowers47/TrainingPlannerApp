@@ -15,7 +15,7 @@ Purpose:
     coaches see the friendlier term "Coaching Focus" in the user interface.
 
 Library Structure:
-    Development Phase
+    Development Block
         -> Coaching Focus
             -> Drill
 """
@@ -28,7 +28,7 @@ COACHING_LIBRARY_VERSION = "1.0"
 
 COACHING_FOCUSES = [
     # ================================================================
-    # Phase 1: Ball Mastery
+    # Block 1: Ball Mastery
     # ================================================================
 
     TechnicalFocus(
@@ -117,7 +117,7 @@ COACHING_FOCUSES = [
     ),
 
     # ================================================================
-    # Phase 2: Receiving & Passing
+    # Block 2: Receiving & Passing
     # ================================================================
 
     TechnicalFocus(
@@ -210,7 +210,7 @@ COACHING_FOCUSES = [
     ),
 
     # ================================================================
-    # Phase 3: 1v1 Moves
+    # Block 3: 1v1 Moves
     # ================================================================
 
     TechnicalFocus(
@@ -301,7 +301,7 @@ COACHING_FOCUSES = [
     ),
 
     # ================================================================
-    # Phase 4: Speed
+    # Block 4: Speed
     # ================================================================
 
     TechnicalFocus(
@@ -387,7 +387,7 @@ COACHING_FOCUSES = [
     ),
 
     # ================================================================
-    # Phase 5: Finishing
+    # Block 5: Finishing
     # ================================================================
 
     TechnicalFocus(
@@ -477,7 +477,7 @@ COACHING_FOCUSES = [
     ),
 
     # ================================================================
-    # Phase 6: Group Play
+    # Block 6: Group Play
     # ================================================================
 
     TechnicalFocus(
@@ -591,7 +591,7 @@ def get_all_coaching_focuses() -> list[TechnicalFocus]:
 def get_coaching_focuses_by_block(
     development_block_id: int,
 ) -> list[TechnicalFocus]:
-    """Return the Coaching Focuses belonging to one Development Phase."""
+    """Return the Coaching Focuses belonging to one Development Block."""
 
     return [
         coaching_focus
@@ -603,7 +603,7 @@ def get_coaching_focus_names_by_block(
     development_build_id: int,
 ) -> list[str]:
     """
-    Return the active Coaching Focus names for one Development Phase.
+    Return the active Coaching Focus names for one Development Block.
 
     The names are returned in the same order they appear in the
     Coaching Library.
@@ -623,7 +623,7 @@ def get_coaching_focus_id_by_name(
     """
     Return the ID of a Coaching Focus selected by name.
 
-    The Development Phase ID prevents a focus from accidentally being
+    The Development Block ID prevents a focus from accidentally being
     matched to the wrong block.
     """
 
@@ -656,7 +656,7 @@ def get_coaching_focus_by_name(
     """
     Find an active Coaching Focus by name.
 
-    When a Development Phase ID is provided, the lookup is restricted
+    When a Development Block ID is provided, the lookup is restricted
     to that block.
     """
 
@@ -682,7 +682,7 @@ def get_coaching_focus_names_by_block(
 ) -> list[str]:
     """
     Return only the names of Coaching Focuses
-    for one Development Phase.
+    for one Development Block.
     """
 
     return sorted(
