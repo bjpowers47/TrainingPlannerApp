@@ -95,6 +95,15 @@ class Practice:
             for block in self.get_block_names()
         }
 
+    def retain_configured_coaches(self, configured_coaches) -> None:
+        """Remove obsolete block assignments after coaching configuration changes."""
+        allowed = {name for name in configured_coaches if name}
+        self.block_coaches = {
+            block: [name for name in names if name in allowed]
+            for block, names in self.block_coaches.items()
+            if any(name in allowed for name in names)
+        }
+
     def total_duration(self) -> int:
         """Return the total planned practice duration in minutes."""
 

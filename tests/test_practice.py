@@ -162,6 +162,17 @@ def test_practice_activity_is_saved_and_loaded():
     assert loaded_activity.reps == practice.get_activities(phase)[0].reps
     assert loaded_activity.rest_seconds == practice.get_activities(phase)[0].rest_seconds
 
+
+def test_removed_coaches_are_not_retained_for_printing():
+    practice = Practice(
+        block_coaches={
+            "Ball Mastery": ["Current Coach", "Old Coach"],
+            "Finishing": ["Old Coach"],
+        }
+    )
+    practice.retain_configured_coaches(["Current Coach"])
+    assert practice.block_coaches == {"Ball Mastery": ["Current Coach"]}
+
 if __name__ == "__main__":
     test_practice()
     test_practice_information_is_saved_and_loaded()

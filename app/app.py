@@ -121,7 +121,7 @@ class TrainingPlannerApp(ctk.CTk):
         )
         title = ctk.CTkLabel(
             self.sidebar,
-            text=APP_NAME,
+            text="Training Planner",
             image=self.sidebar_logo,
             compound="left",
             font=("Segoe UI", 18, "bold"),
@@ -276,6 +276,7 @@ class TrainingPlannerApp(ctk.CTk):
         page.pack(fill="both", expand=True)
     def show_practice_builder(self):
         self.clear_content()
+        self.current_practice.retain_configured_coaches(self._configured_coaches())
         self.current_practice.configured_blocks = [block.name for block in self.repositories.development_blocks.list_all()]
         self.practice_builder_page = PracticeBuilderPage(
             self.content,
@@ -432,6 +433,7 @@ class TrainingPlannerApp(ctk.CTk):
             head_coach = self.config_manager.data.get("head_coach", "")
             practice.head_coach = head_coach
             practice.sport = self.config_manager.data.get("sport", "")[:15]
+            practice.retain_configured_coaches(self._configured_coaches())
             printed = print_practice(practice)
         except Exception as error:
             self.status.configure(text="Print failed")
