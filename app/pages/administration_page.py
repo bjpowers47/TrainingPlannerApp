@@ -1,6 +1,12 @@
 import customtkinter as ctk
 
 
+FONT_FAMILY = "Segoe UI"
+TITLE_FONT = (FONT_FAMILY, 28, "bold")
+BODY_FONT = (FONT_FAMILY, 14)
+PRIMARY_ACTION_FONT = (FONT_FAMILY, 17, "bold")
+
+
 class AdministrationPage(ctk.CTkFrame):
     """Administration dashboard for managing application data."""
 
@@ -13,6 +19,7 @@ class AdministrationPage(ctk.CTkFrame):
         export_spreadsheet_callback=None,
         database_maintenance_callback=None,
         restore_database_callback=None,
+        configuration_callback=None,
     ):
         super().__init__(master)
 
@@ -22,6 +29,7 @@ class AdministrationPage(ctk.CTkFrame):
         self.export_spreadsheet_callback = export_spreadsheet_callback
         self.database_maintenance_callback = database_maintenance_callback
         self.restore_database_callback = restore_database_callback
+        self.configuration_callback = configuration_callback
 
         self.grid_columnconfigure(0, weight=1)
 
@@ -30,10 +38,23 @@ class AdministrationPage(ctk.CTkFrame):
     def build_ui(self):
         """Build the Administration dashboard."""
 
+        # Retain one fully specified CTkFont for these peer actions.  Passing a
+        # tuple makes CustomTkinter create a separate internal font per widget;
+        # sharing this object guarantees all three buttons use identical font
+        # metrics and styling at render time.
+        self.drill_spreadsheet_action_font = ctk.CTkFont(
+            family="Segoe UI",
+            size=17,
+            weight="bold",
+            slant="roman",
+            underline=False,
+            overstrike=False,
+        )
+
         title = ctk.CTkLabel(
             self,
             text="Administration",
-            font=("Segoe UI", 28, "bold"),
+            font=TITLE_FONT,
         )
         title.grid(
             row=0,
@@ -49,7 +70,7 @@ class AdministrationPage(ctk.CTkFrame):
                 "Manage drills, coaching content, imports, exports, "
                 "and application data."
             ),
-            font=("Segoe UI", 14),
+            font=BODY_FONT,
         )
         subtitle.grid(
             row=1,
@@ -75,7 +96,7 @@ class AdministrationPage(ctk.CTkFrame):
             tools_frame,
             text="📚 Drill Manager",
             height=70,
-            font=("Segoe UI", 17, "bold"),
+            font=PRIMARY_ACTION_FONT,
             command=self.open_drill_manager,
         )
         drill_button.grid(
@@ -88,10 +109,10 @@ class AdministrationPage(ctk.CTkFrame):
 
         technical_focus_button = ctk.CTkButton(
             tools_frame,
-            text="🎯 Technical Focus Manager",
+            text="Configuration",
             height=70,
-            font=("Segoe UI", 17, "bold"),
-            state="disabled",
+            font=PRIMARY_ACTION_FONT,
+            command=self.open_configuration,
         )
         technical_focus_button.grid(
             row=0,
@@ -105,13 +126,12 @@ class AdministrationPage(ctk.CTkFrame):
             tools_frame,
             text="💾 Database Maintenance",
             height=70,
-            font=("Segoe UI", 17, "bold"),
+            font=PRIMARY_ACTION_FONT,
             command=self.open_database_maintenance,
         )
         database_button.grid(
             row=1,
             column=0,
-            columnspan=2,
             sticky="ew",
             padx=15,
             pady=15,
@@ -119,8 +139,17 @@ class AdministrationPage(ctk.CTkFrame):
 
         ctk.CTkButton(
             tools_frame,
+            text="Restore Database Backup",
+            height=70,
+            font=PRIMARY_ACTION_FONT,
+            command=self.restore_database,
+        ).grid(row=1, column=1, sticky="ew", padx=15, pady=15)
+
+        ctk.CTkButton(
+            tools_frame,
             text="Create Drill Template",
             height=48,
+            font=self.drill_spreadsheet_action_font,
             command=self.create_template,
         ).grid(row=2, column=0, sticky="ew", padx=15, pady=15)
 
@@ -128,20 +157,15 @@ class AdministrationPage(ctk.CTkFrame):
             tools_frame,
             text="Import Drill Spreadsheet",
             height=48,
+            font=self.drill_spreadsheet_action_font,
             command=self.import_spreadsheet,
         ).grid(row=2, column=1, sticky="ew", padx=15, pady=15)
 
         ctk.CTkButton(
             tools_frame,
-            text="Restore Database Backup",
-            height=48,
-            command=self.restore_database,
-        ).grid(row=3, column=1, sticky="ew", padx=15, pady=15)
-
-        ctk.CTkButton(
-            tools_frame,
             text="Export Drill Spreadsheet",
             height=48,
+            font=self.drill_spreadsheet_action_font,
             command=self.export_spreadsheet,
         ).grid(row=3, column=0, sticky="ew", padx=15, pady=15)
 
@@ -170,3 +194,7 @@ class AdministrationPage(ctk.CTkFrame):
     def restore_database(self):
         if self.restore_database_callback is not None:
             self.restore_database_callback()
+
+    def open_configuration(self):
+        if self.configuration_callback is not None:
+            self.configuration_callback()

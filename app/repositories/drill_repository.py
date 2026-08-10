@@ -36,6 +36,7 @@ class DrillRepository:
             name=row["name"],
             development_block_id=row["development_block_id"],
             technical_focus_id=row["technical_focus_id"],
+            coaching_focus=row["coaching_focus"],
             purpose=row["purpose"],
             duration_minutes=row["duration_minutes"],
             recommended_players=row["recommended_players"],
@@ -55,7 +56,7 @@ class DrillRepository:
     def save(self, drill: Drill) -> None:
         self._ensure_initialized()
         values = (
-            drill.development_block_id, drill.technical_focus_id, drill.name,
+            drill.development_block_id, drill.technical_focus_id, drill.coaching_focus, drill.name,
             drill.purpose, drill.duration_minutes, drill.recommended_players,
             int(drill.use_execution_details), drill.sets, drill.reps,
             drill.work_seconds, drill.rest_seconds, self._encode(drill.equipment),
@@ -69,7 +70,7 @@ class DrillRepository:
             if exists:
                 connection.execute(
                     """UPDATE drills SET development_block_id=?, technical_focus_id=?,
-                    name=?, purpose=?, duration_minutes=?, recommended_players=?,
+                    coaching_focus=?, name=?, purpose=?, duration_minutes=?, recommended_players=?,
                     use_execution_details=?, sets=?, reps=?, work_seconds=?, rest_seconds=?,
                     equipment=?, coaching_points=?, progressions=?, variations=?, notes=?,
                     is_active=? WHERE id=?""",
@@ -78,10 +79,10 @@ class DrillRepository:
             else:
                 connection.execute(
                     """INSERT INTO drills (id, development_block_id, technical_focus_id,
-                    name, purpose, duration_minutes, recommended_players,
+                    coaching_focus, name, purpose, duration_minutes, recommended_players,
                     use_execution_details, sets, reps, work_seconds, rest_seconds,
                     equipment, coaching_points, progressions, variations, notes, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (drill.id,) + values[:-1],
                 )
 
@@ -92,6 +93,14 @@ class DrillRepository:
                 "SELECT * FROM drills WHERE is_active = 1 ORDER BY development_block_id, name"
             ).fetchall()
         return [self._to_drill(row) for row in rows]
+
+    def get_next_id(self) -> int:
+        """Return an unused ID, including archived drills in the calculation."""
+        self._ensure_initialized()
+        with self._database.connect() as connection:
+            return connection.execute(
+                "SELECT COALESCE(MAX(id), 0) + 1 FROM drills"
+            ).fetchone()[0]
 
     def get_by_id(self, drill_id: int) -> Drill | None:
         self._ensure_initialized()
@@ -112,3 +121,10 @@ class DrillRepository:
         drill.archive()
         self.save(drill)
         return True
+
+    def delete(self, drill_id: int) -> bool:
+        """Permanently delete a drill from the Development Library."""
+        self._ensure_initialized()
+        with self._database.connect() as connection:
+            cursor = connection.execute("DELETE FROM drills WHERE id = ?", (drill_id,))
+            return cursor.rowcount > 0

@@ -24,13 +24,23 @@ class PracticeBuilderPage(ctk.CTkFrame):
     # Initialization
     # ==========================================================
 
-    def __init__(self, parent, practice, open_library_callback, export_pdf_callback=None):
+    def __init__(
+        self,
+        parent,
+        practice,
+        open_library_callback,
+        export_pdf_callback=None,
+        save_practice_callback=None,
+        coaches=None,
+    ):
         super().__init__(parent)
 
         self.practice = practice
 
         self.open_library_callback = open_library_callback
         self.export_pdf_callback = export_pdf_callback
+        self.save_practice_callback = save_practice_callback
+        self.coaches = coaches or []
 
         self.build_ui()
         self.refresh_summary()
@@ -67,12 +77,17 @@ class PracticeBuilderPage(ctk.CTkFrame):
         self.title_label.grid(row=0, column=0, sticky="w")
         ctk.CTkButton(
             title_frame,
-            text="Save Practice as PDF",
+            text="Save Practice",
+            command=self.save_practice_callback,
+        ).grid(row=0, column=1, sticky="e", padx=(0, 10))
+        ctk.CTkButton(
+            title_frame,
+            text="Print",
             command=self.save_as_pdf,
-        ).grid(row=0, column=1, sticky="e")
+        ).grid(row=0, column=2, sticky="e")
 
     def save_as_pdf(self):
-        """Capture current values and request a PDF export."""
+        """Capture current values and open the print dialog."""
         self.update_practice_information()
         if self.export_pdf_callback is not None:
             self.export_pdf_callback(self.practice)
@@ -107,6 +122,13 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 padx=15,
                 pady=(12, 4),
             )
+            coach_frame = ctk.CTkFrame(section, fg_color="transparent")
+            coach_frame.pack(anchor="w", padx=25, pady=4)
+            ctk.CTkLabel(coach_frame, text="Coaches:").pack(side="left", padx=(0, 8))
+            for coach in self.coaches:
+                var = ctk.BooleanVar(value=coach in self.practice.block_coaches.get(block, []))
+                ctk.CTkCheckBox(coach_frame, text=coach, variable=var,
+                    command=lambda b=block, c=coach, v=var: self._assign_coach(b, c, v.get())).pack(side="left", padx=4)
 
             separator = ctk.CTkFrame(
                 section,
@@ -248,64 +270,63 @@ class PracticeBuilderPage(ctk.CTkFrame):
         )
 
     def build_summary_details(self):
-        """Build the one-line practice summary."""
+        """Build the coach summary table and column headings."""
 
-        self.summary_text = ctk.CTkLabel(
-            self.summary_frame,
-            text="",
-            justify="left",
-            anchor="w",
-            font=("Segoe UI", 14),
-            text_color="pink",
-        )
-        self.summary_text.grid(
+        self.summary_table = ctk.CTkFrame(self.summary_frame, fg_color="transparent")
+        self.summary_table.grid(
             row=1,
-            column=0,
-            sticky="w",
-            padx=10,
-            pady=(0, 6),
-        )
-    def build_summary_progress(self):
-        """Build the practice-time progress display."""
-
-        ctk.CTkLabel(
-            self.summary_frame,
-            text="Progress",
-            font=ctk.CTkFont(
-                size=14,
-                weight="bold",
-            ),
-        ).grid(
-            row=2,
-            column=0,
-            sticky="w",
-            padx=10,
-            pady=(5, 4),
-        )
-
-        self.practice_time_progress = ctk.CTkProgressBar(
-            self.summary_frame,
-        )
-        self.practice_time_progress.grid(
-            row=3,
             column=0,
             sticky="ew",
             padx=10,
             pady=(0, 6),
         )
-        self.practice_time_progress.set(0)
+        column_widths = (150, 80, 100, 90, 100, 220)
+        headings = ("Coach", "Activities", "Warm-up", "Planned", "Remaining", "Progress")
+        for column, (heading, width) in enumerate(zip(headings, column_widths)):
+            self.summary_table.grid_columnconfigure(column, weight=1 if column == 5 else 0)
+            ctk.CTkLabel(
+                self.summary_table,
+                text=heading,
+                width=width,
+                anchor="w" if column in (0, 5) else "center",
+                font=ctk.CTkFont(size=13, weight="bold"),
+            ).grid(row=0, column=column, sticky="ew", padx=4, pady=(0, 4))
 
-        self.practice_time_label = ctk.CTkLabel(
-            self.summary_frame,
-            text="0 / 90 min planned",
-        )
-        self.practice_time_label.grid(
-            row=4,
-            column=0,
-            sticky="w",
-            padx=10,
-            pady=(0, 10),
-        )
+    def build_summary_progress(self):
+        """Build one aligned summary row for each coach."""
+
+        self.coach_progress = {}
+        self.coach_summary_values = {}
+        for row, coach in enumerate(self.coaches, start=1):
+            values = {}
+            for column, (key, width) in enumerate((
+                ("coach", 150),
+                ("activities", 80),
+                ("warm_up", 100),
+                ("planned", 90),
+                ("remaining", 100),
+            )):
+                label = ctk.CTkLabel(
+                    self.summary_table,
+                    text=coach if key == "coach" else "",
+                    width=width,
+                    anchor="w" if key == "coach" else "center",
+                )
+                label.grid(row=row, column=column, sticky="ew", padx=4, pady=3)
+                values[key] = label
+
+            progress_cell = ctk.CTkFrame(self.summary_table, fg_color="transparent")
+            progress_cell.grid(row=row, column=5, sticky="ew", padx=4, pady=3)
+            progress_cell.grid_columnconfigure(0, weight=1)
+            bar = ctk.CTkProgressBar(progress_cell)
+            bar.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+            bar.set(0)
+            progress_label = ctk.CTkLabel(progress_cell, text="0%", width=45, anchor="e")
+            progress_label.grid(row=0, column=1)
+            values["progress"] = progress_label
+            self.coach_summary_values[coach] = values
+            self.coach_progress[coach] = bar
+
     def build_practice_information(self):
         """Build the editable Practice Information controls."""
 
@@ -342,32 +363,9 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             info_frame,
-            text="Practice Date:",
-        ).grid(
-            row=1,
-            column=0,
-            sticky="e",
-            padx=10,
-            pady=8,
-        )
-
-        self.date_entry = ctk.CTkEntry(
-            info_frame,
-            width=150,
-        )
-        self.date_entry.grid(
-            row=1,
-            column=1,
-            sticky="w",
-            padx=10,
-        )
-        self.date_entry.insert(0, self.practice.practice_date)
-
-        ctk.CTkLabel(
-            info_frame,
             text="Practice Length:",
         ).grid(
-            row=2,
+            row=1,
             column=0,
             sticky="e",
             padx=10,
@@ -381,7 +379,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             fg_color="transparent",
         )
         duration_frame.grid(
-            row=2,
+            row=1,
             column=1,
             sticky="w",
             padx=10,
@@ -410,32 +408,9 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             info_frame,
-            text="Team:",
-        ).grid(
-            row=3,
-            column=0,
-            sticky="e",
-            padx=10,
-            pady=8,
-        )
-
-        self.team_entry = ctk.CTkEntry(
-            info_frame,
-            width=150,
-        )
-        self.team_entry.grid(
-            row=3,
-            column=1,
-            sticky="w",
-            padx=10,
-        )
-        self.team_entry.insert(0, self.practice.team_name)
-
-        ctk.CTkLabel(
-            info_frame,
             text="Objective:",
         ).grid(
-            row=4,
+            row=2,
             column=0,
             sticky="ne",
             padx=10,
@@ -447,7 +422,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             height=90,
         )
         self.objective_text.grid(
-            row=4,
+            row=2,
             column=1,
             sticky="ew",
             padx=10,
@@ -479,14 +454,6 @@ class PracticeBuilderPage(ctk.CTkFrame):
         practice_name = self.name_entry.get().strip()
         self.practice.name = practice_name
 
-        self.practice.practice_date = (
-            self.date_entry.get().strip()
-        )
-
-        self.practice.team_name = (
-            self.team_entry.get().strip()
-        )
-
         self.practice.objective = (
             self.objective_text.get(
                 "1.0",
@@ -502,10 +469,12 @@ class PracticeBuilderPage(ctk.CTkFrame):
             self.practice.warm_up_minutes = 0
         else:
             try:
-                minutes = int(text)
+                minutes = float(text)
             except ValueError:
                 return
             if minutes < 0:
+                return
+            if minutes * 2 != int(minutes * 2):
                 return
             self.practice.warm_up_minutes = minutes
         self.refresh_summary()
@@ -530,40 +499,35 @@ class PracticeBuilderPage(ctk.CTkFrame):
     def refresh_summary(self):
         """Update the Practice Summary."""
 
-        activity_count = self.practice.activity_count()
-        planned_minutes = self.practice.total_duration()
-
         try:
-            target_minutes = int(self.practice_duration_var.get())
+            target_minutes = float(self.practice_duration_var.get())
         except ValueError:
             target_minutes = 0
 
-        remaining_minutes = target_minutes - planned_minutes
+        for coach in self.coaches:
+            assigned = [b for b, names in self.practice.block_coaches.items() if coach in names]
+            count = sum(len(self.practice.activities.get(b, [])) for b in assigned)
+            minutes = sum(a.duration_minutes() for b in assigned for a in self.practice.activities.get(b, []))
+            remaining = target_minutes - self.practice.warm_up_minutes - minutes
+            percent = min(100, (minutes + self.practice.warm_up_minutes) / target_minutes * 100) if target_minutes else 0
+            self.coach_progress[coach].set(percent / 100)
+            values = self.coach_summary_values[coach]
+            values["activities"].configure(text=str(count))
+            values["warm_up"].configure(text=f"{self.practice.warm_up_minutes:g} min")
+            values["planned"].configure(text=f"{minutes:g} min")
+            values["remaining"].configure(text=f"{remaining:g} min")
+            values["progress"].configure(text=f"{percent:.0f}%")
 
-        summary_text = (
-            f"Activities: {activity_count}   |  "
-            f"Warm Up: {self.practice.warm_up_minutes} min   |  "
-            f"Planned: {planned_minutes} min   |   "
-            f"Target: {target_minutes} min   |   "
-            f"Remaining: {remaining_minutes} min"
-        )
+    def _assign_coach(self, block, coach, selected):
+        names = self.practice.block_coaches.setdefault(block, [])
+        if selected and coach not in names:
+            names.append(coach)
+        elif not selected and coach in names:
+            names.remove(coach)
+        if block not in self.practice.selected_blocks:
+            self.practice.selected_blocks.append(block)
+        self.refresh_summary()
 
-        self.summary_text.configure(
-            text=summary_text,
-        )
-
-        if target_minutes > 0:
-            progress = planned_minutes / target_minutes
-        else:
-            progress = 0
-
-        display_progress = min(max(progress, 0), 1)
-
-        self.practice_time_progress.set(display_progress)
-
-        self.practice_time_label.configure(
-            text=f"{planned_minutes} / {target_minutes} min"
-        )          
     # ==========================================================
     # Activity Management
     # ==========================================================

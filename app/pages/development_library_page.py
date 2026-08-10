@@ -11,6 +11,50 @@ Purpose:
 
 import customtkinter as ctk
 from app.models.player_development import DEVELOPMENT_BLOCKS
+from app.services.coaching_library import get_coaching_focus_by_id
+
+
+def format_drill_details(drill):
+    """Return all coach-facing persisted details for a library drill."""
+
+    coaching_focus = getattr(drill, "coaching_focus", "").strip()
+    if not coaching_focus and getattr(drill, "technical_focus_id", None):
+        legacy_focus = get_coaching_focus_by_id(drill.technical_focus_id)
+        coaching_focus = legacy_focus.name if legacy_focus else ""
+
+    def value_or_default(value):
+        return value if value not in (None, "") else "Not specified"
+
+    def list_section(title, values):
+        items = [str(value).strip() for value in (values or []) if str(value).strip()]
+        body = "\n".join(f"- {item}" for item in items) if items else "Not specified"
+        return f"{title}\n{body}"
+
+    sections = [
+        drill.name,
+        "----------------------------",
+        f"Coaching Focus\n{value_or_default(coaching_focus)}",
+        f"Directions\n{value_or_default(drill.purpose)}",
+        (
+            "Recommended Structure\n"
+            f"Duration: {drill.duration_minutes} minutes\n"
+            f"Players: {value_or_default(drill.recommended_players)}"
+        ),
+        (
+            "Execution Details\n"
+            f"Enabled: {'Yes' if getattr(drill, 'use_execution_details', False) else 'No'}\n"
+            f"Sets: {value_or_default(getattr(drill, 'sets', None))}\n"
+            f"Reps: {value_or_default(getattr(drill, 'reps', None))}\n"
+            f"Work: {value_or_default(getattr(drill, 'work_seconds', None))} seconds\n"
+            f"Rest: {value_or_default(getattr(drill, 'rest_seconds', None))} seconds"
+        ),
+        list_section("Equipment", drill.equipment),
+        list_section("Coaching Points", drill.coaching_points),
+        list_section("Progressions", drill.progressions),
+        list_section("Variations", drill.variations),
+        f"Notes\n{value_or_default(drill.notes)}",
+    ]
+    return "\n\n".join(sections)
 
 class DevelopmentLibraryPage(ctk.CTkFrame):
     """Development Library page."""
@@ -22,6 +66,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         selected_block=None,
         add_to_practice_callback=None,
         cancel_callback=None,
+        blocks=None,
     ):
         super().__init__(parent)
 
@@ -29,6 +74,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         self.selected_block = selected_block
         self.add_to_practice_callback = add_to_practice_callback
         self.cancel_callback = cancel_callback
+        self.blocks = blocks or DEVELOPMENT_BLOCKS
 
         self.selected_block_id = None
         self.selected_drill_ids = set()
@@ -230,7 +276,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
     def load_blocks(self):
         """Create the Development Block buttons."""
 
-        for block in DEVELOPMENT_BLOCKS:
+        for block in self.blocks:
             button = ctk.CTkButton(
                 self.blocks_frame,
                 text=block.name,
@@ -327,62 +373,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         """Display the selected drill's information."""
 
         self.details_box.delete("1.0", "end")
-        self.details_box.insert("end", f"{drill.name}\n")
-        self.details_box.insert(
-            "end",
-            "\n────────────────────────────\n\n",
-        )
-
-        self.details_box.insert("end", "Purpose\n")
-        self.details_box.insert(
-            "end",
-            f"{drill.purpose}\n\n",
-        )
-
-        self.details_box.insert("end", "Recommended Structure\n")
-        self.details_box.insert(
-            "end",
-            f"Duration: {drill.duration_minutes} minutes\n",
-        )
-        self.details_box.insert(
-            "end",
-            f"Players: {drill.recommended_players}\n\n",
-        )
-
-        self.details_box.insert("end", "Equipment\n")
-        for item in drill.equipment:
-            self.details_box.insert(
-                "end",
-                f"• {item}\n",
-            )
-
-        self.details_box.insert("end", "\nCoaching Points\n")
-        for point in drill.coaching_points:
-            self.details_box.insert(
-                "end",
-                f"• {point}\n",
-            )
-
-        self.details_box.insert("end", "\nProgressions\n")
-        for progression in drill.progressions:
-            self.details_box.insert(
-                "end",
-                f"• {progression}\n",
-            )
-
-        self.details_box.insert("end", "\nVariations\n")
-        for variation in drill.variations:
-            self.details_box.insert(
-                "end",
-                f"• {variation}\n",
-            )
-
-        if drill.notes:
-            self.details_box.insert("end", "\nNotes\n")
-            self.details_box.insert(
-                "end",
-                drill.notes,
-            )
+        self.details_box.insert("end", format_drill_details(drill))
     def submit_selected_drills(self):
         """Add selected drills to the current practice."""
 
@@ -478,7 +469,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
     def get_selected_block_object(self):
         """Return the Development Block matching the selected block name."""
 
-        for block in DEVELOPMENT_BLOCKS:
+        for block in self.blocks:
             if block.name == self.selected_block:
                 return block
 

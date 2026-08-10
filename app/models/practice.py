@@ -26,7 +26,11 @@ class Practice:
     practice_date: str = ""
     team_name: str = ""
     objective: str = ""
-    warm_up_minutes: int = 0
+    warm_up_minutes: float = 0
+    selected_blocks: list[str] = field(default_factory=list)
+    block_coaches: dict[str, list[str]] = field(default_factory=dict)
+    head_coach: str = ""
+    configured_blocks: list[str] = field(default_factory=list, repr=False)
 
     activities: dict[str, list[PracticeActivity]] = field(
         default_factory=lambda: {
@@ -39,7 +43,7 @@ class Practice:
         """Add a drill to a practice block using the drill defaults."""
 
         activity = PracticeActivity.from_drill(drill)
-        self.activities[block].append(activity)
+        self.activities.setdefault(block, []).append(activity)
 
     def remove_activity(
         self,
@@ -61,17 +65,17 @@ class Practice:
     def get_activities(self, block: str) -> list[PracticeActivity]:
         """Return all activities for a block."""
 
-        return self.activities[block]
+        return self.activities.setdefault(block, [])
 
     def get_block_names(self) -> list[str]:
         """Return the practice blocks in display order."""
 
-        return get_block_names()
+        return self.configured_blocks or list(self.activities)
 
     def has_activities(self, block: str) -> bool:
         """Return True when a block contains activities."""
 
-        return len(self.activities[block]) > 0
+        return len(self.activities.get(block, [])) > 0
 
     def activity_count(self) -> int:
         """Return the total number of activities in the practice."""
@@ -98,7 +102,7 @@ class Practice:
             for activity in activities:
                 total += activity.duration_minutes()
 
-        return round(total)
+        return round(total * 2) / 2
     def save_to_json(self, filename: str) -> None:
         """Save the practice to a JSON file."""
 
@@ -110,6 +114,9 @@ class Practice:
             "team_name": self.team_name,
             "objective": self.objective,
             "warm_up_minutes": self.warm_up_minutes,
+            "selected_blocks": self.selected_blocks,
+            "block_coaches": self.block_coaches,
+            "head_coach": self.head_coach,
             "activities": {},
         }
 
@@ -158,7 +165,10 @@ class Practice:
                 "objective",
                 "",
             ),
-            warm_up_minutes=max(0, int(practice_data.get("warm_up_minutes", 0) or 0)),
+            warm_up_minutes=max(0, float(practice_data.get("warm_up_minutes", 0) or 0)),
+            selected_blocks=practice_data.get("selected_blocks", []),
+            block_coaches=practice_data.get("block_coaches", {}),
+            head_coach=practice_data.get("head_coach", ""),
         )
 
         saved_activities = practice_data.get(
@@ -195,6 +205,7 @@ class Practice:
                             "coach_notes",
                             "",
                         ),
+                        print_details=bool(activity_data.get("print_details", False)),
                     )
 
                 else:

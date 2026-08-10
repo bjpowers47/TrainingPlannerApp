@@ -50,3 +50,7 @@ class DevelopmentLibraryService:
     def get_drills_for_focus(self, focus_id: int):
         """Return drills for a Technical Focus."""
         return self._drill_repository.get_by_technical_focus(focus_id)
+
+    def delete_drill(self, drill_id: int) -> bool:
+        """Permanently remove a drill from the Development Library."""
+        return self._drill_repository.delete(drill_id)

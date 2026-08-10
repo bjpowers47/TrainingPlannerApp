@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import textwrap
+import ctypes
+from ctypes import wintypes
 from pathlib import Path
+
+from app.services.coaching_library import get_coaching_focus_by_id
 
 
 def _clean(value: object) -> str:
@@ -18,10 +22,14 @@ def _duration_text(minutes: float) -> str:
     return f"{int(minutes)} min" if minutes.is_integer() else f"{minutes:.1f} min"
 
 
-def build_practice_pdf_lines(practice) -> list[tuple[str, str]]:
+def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[str, str]]:
     """Build styled logical lines, kept separate for focused validation."""
     lines: list[tuple[str, str]] = []
     lines.append(("title", _clean(practice.name) or "Soccer Practice Plan"))
+    if coach:
+        lines.append(("normal", f"Coach: {_clean(coach)}"))
+    elif _clean(getattr(practice, "head_coach", "")):
+        lines.append(("normal", f"Master Plan — Head Coach: {_clean(practice.head_coach)}"))
     details = []
     if _clean(practice.practice_date):
         details.append(f"Date: {_clean(practice.practice_date)}")
@@ -34,11 +42,16 @@ def build_practice_pdf_lines(practice) -> list[tuple[str, str]]:
     lines.append(("spacer", ""))
 
     lines.append(("heading", "Warm Up"))
-    lines.append(("normal", f"Duration: {practice.warm_up_minutes} min"))
+    lines.append(("normal", f"Duration: {_duration_text(float(practice.warm_up_minutes))}"))
 
     for block in practice.get_block_names():
+        if coach and coach not in practice.block_coaches.get(block, []):
+            continue
         lines.append(("spacer", ""))
-        lines.append(("heading", block))
+        assigned_coaches = practice.block_coaches.get(block, [])
+        coach_label = ", ".join(_clean(name) for name in assigned_coaches if _clean(name))
+        heading = f"{block} — Coach{'es' if len(assigned_coaches) != 1 else ''}: {coach_label}" if coach_label else block
+        lines.append(("heading", heading))
         activities = practice.get_activities(block)
         if not activities:
             lines.append(("muted", "No activities planned."))
@@ -50,15 +63,19 @@ def build_practice_pdf_lines(practice) -> list[tuple[str, str]]:
             facts = [f"Time: {_duration_text(activity.duration_minutes())}"]
             if activity.sets is not None:
                 facts.append(f"Sets: {activity.sets}")
-            if _clean(activity.reps):
-                facts.append(f"Reps: {_clean(activity.reps)}")
             if activity.work_seconds:
-                facts.append(f"Work: {activity.work_seconds} sec")
+                facts.append(f"Work: {_duration_text(activity.work_minutes)}")
             if activity.rest_seconds:
-                facts.append(f"Rest: {activity.rest_seconds} sec")
+                facts.append(f"Rest: {_duration_text(activity.rest_minutes)}")
             lines.append(("normal", " | ".join(facts)))
-            for label, value in (
-                ("Purpose", drill.purpose),
+            coaching_focus = _clean(getattr(drill, "coaching_focus", ""))
+            if not coaching_focus and getattr(drill, "technical_focus_id", None):
+                legacy_focus = get_coaching_focus_by_id(drill.technical_focus_id)
+                coaching_focus = _clean(legacy_focus.name) if legacy_focus else ""
+            detail_values = (
+                ("Coaching Focus", coaching_focus),
+                ("Directions", drill.purpose),
+                ("Recommended Duration", _duration_text(float(drill.duration_minutes))),
                 ("Players", drill.recommended_players),
                 ("Equipment", _join(drill.equipment)),
                 ("Coaching Points", _join(drill.coaching_points)),
@@ -66,16 +83,161 @@ def build_practice_pdf_lines(practice) -> list[tuple[str, str]]:
                 ("Variations", _join(drill.variations)),
                 ("Drill Notes", drill.notes),
                 ("Practice Notes", activity.coach_notes),
-            ):
-                if _clean(value):
-                    lines.append(("detail", f"{label}: {_clean(value)}"))
+            )
+            if activity.print_details:
+                for label, value in detail_values:
+                    lines.append(("detail", f"{label}: {_clean(value) or 'Not specified'}"))
 
     lines.append(("spacer", ""))
-    lines.append(("total", f"Total Planned Time: {practice.total_duration()} min"))
+    lines.append(("total", f"Total Planned Time: {_duration_text(float(practice.total_duration()))}"))
     return lines
 
 
-def export_practice_pdf(filename: str | Path, practice) -> None:
+def print_practice(practice, coach: str | None = None) -> bool:
+    """Show the Windows Print dialog and render directly to its selected printer."""
+    class PRINTDLGW(ctypes.Structure):
+        _fields_ = [
+            ("lStructSize", wintypes.DWORD), ("hwndOwner", wintypes.HWND),
+            ("hDevMode", wintypes.HANDLE), ("hDevNames", wintypes.HANDLE),
+            ("hDC", wintypes.HDC), ("Flags", wintypes.DWORD),
+            ("nFromPage", wintypes.WORD), ("nToPage", wintypes.WORD),
+            ("nMinPage", wintypes.WORD), ("nMaxPage", wintypes.WORD),
+            ("nCopies", wintypes.WORD), ("hInstance", wintypes.HINSTANCE),
+            ("lCustData", wintypes.LPARAM), ("lpfnPrintHook", ctypes.c_void_p),
+            ("lpfnSetupHook", ctypes.c_void_p), ("lpPrintTemplateName", wintypes.LPCWSTR),
+            ("lpSetupTemplateName", wintypes.LPCWSTR), ("hPrintTemplate", wintypes.HANDLE),
+            ("hSetupTemplate", wintypes.HANDLE),
+        ]
+
+    class DOCINFOW(ctypes.Structure):
+        _fields_ = [
+            ("cbSize", ctypes.c_int), ("lpszDocName", wintypes.LPCWSTR),
+            ("lpszOutput", wintypes.LPCWSTR), ("lpszDatatype", wintypes.LPCWSTR),
+            ("fwType", wintypes.DWORD),
+        ]
+
+    comdlg32 = ctypes.WinDLL("comdlg32", use_last_error=True)
+    gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    comdlg32.PrintDlgW.argtypes = [ctypes.POINTER(PRINTDLGW)]
+    comdlg32.PrintDlgW.restype = wintypes.BOOL
+    gdi32.CreateFontW.restype = ctypes.c_void_p
+    gdi32.SelectObject.argtypes = [wintypes.HDC, ctypes.c_void_p]
+    gdi32.SelectObject.restype = ctypes.c_void_p
+    gdi32.DeleteObject.argtypes = [ctypes.c_void_p]
+    gdi32.DeleteDC.argtypes = [wintypes.HDC]
+    gdi32.GetDeviceCaps.argtypes = [wintypes.HDC, ctypes.c_int]
+    gdi32.StartDocW.argtypes = [wintypes.HDC, ctypes.POINTER(DOCINFOW)]
+    gdi32.StartPage.argtypes = [wintypes.HDC]
+    gdi32.EndPage.argtypes = [wintypes.HDC]
+    gdi32.EndDoc.argtypes = [wintypes.HDC]
+    gdi32.AbortDoc.argtypes = [wintypes.HDC]
+    user32.DrawTextW.argtypes = [wintypes.HDC, wintypes.LPCWSTR, ctypes.c_int, ctypes.POINTER(wintypes.RECT), wintypes.UINT]
+    kernel32.GlobalFree.argtypes = [ctypes.c_void_p]
+    kernel32.GlobalFree.restype = ctypes.c_void_p
+    pd = PRINTDLGW()
+    pd.lStructSize = ctypes.sizeof(PRINTDLGW)
+    # Display the normal Windows printer-selection dialog. The coach can pick
+    # any installed physical printer or a virtual printer such as Microsoft
+    # Print to PDF. Page-range and selection controls do not apply here.
+    PD_RETURNDC = 0x00000100
+    PD_NOSELECTION = 0x00000004
+    PD_NOPAGENUMS = 0x00000008
+    PD_USEDEVMODECOPIESANDCOLLATE = 0x00040000
+    pd.Flags = (
+        PD_RETURNDC
+        | PD_NOSELECTION
+        | PD_NOPAGENUMS
+        | PD_USEDEVMODECOPIESANDCOLLATE
+    )
+    pd.nFromPage = pd.nToPage = pd.nMinPage = pd.nMaxPage = 1
+    pd.nCopies = 1
+    if not comdlg32.PrintDlgW(ctypes.byref(pd)):
+        error = comdlg32.CommDlgExtendedError()
+        if error:
+            raise OSError(f"Windows Print dialog failed (error {error}).")
+        return False
+
+    hdc = pd.hDC
+    LOGPIXELSX, LOGPIXELSY, HORZRES, VERTRES = 88, 90, 8, 10
+    dpi_x = gdi32.GetDeviceCaps(hdc, LOGPIXELSX)
+    dpi_y = gdi32.GetDeviceCaps(hdc, LOGPIXELSY)
+    page_width = gdi32.GetDeviceCaps(hdc, HORZRES)
+    page_height = gdi32.GetDeviceCaps(hdc, VERTRES)
+    left = right = max(1, int(dpi_x * 0.55))
+    top = bottom = max(1, int(dpi_y * 0.55))
+    content_right = page_width - right
+    content_bottom = page_height - bottom
+    DT_WORDBREAK, DT_CALCRECT, DT_NOPREFIX = 0x10, 0x400, 0x800
+    styles = {
+        "title": (20, 700, 12, 0), "heading": (15, 700, 8, 0),
+        "subheading": (11, 700, 4, 0), "total": (12, 700, 8, 0),
+        "normal": (10, 400, 4, 0), "detail": (9, 400, 3, 14),
+        "muted": (9, 400, 4, 0), "spacer": (7, 400, 7, 0),
+    }
+    fonts = {}
+    old_font = None
+    document_started = False
+    try:
+        for style, (points, weight, _gap, _indent) in styles.items():
+            height = -round(points * dpi_y / 72)
+            fonts[style] = gdi32.CreateFontW(
+                height, 0, 0, 0, weight, 0, 0, 0, 1, 0, 0, 0, 0, "Arial"
+            )
+        doc = DOCINFOW(ctypes.sizeof(DOCINFOW), _clean(practice.name) or "Soccer Practice Plan", None, None, 0)
+        if gdi32.StartDocW(hdc, ctypes.byref(doc)) <= 0:
+            raise OSError("Windows could not start the print job.")
+        document_started = True
+        if gdi32.StartPage(hdc) <= 0:
+            raise OSError("Windows could not start the printed page.")
+        y = top
+        for style, value in build_practice_pdf_lines(practice, coach):
+            points, _weight, gap, indent_points = styles[style]
+            font = fonts[style]
+            previous = gdi32.SelectObject(hdc, font)
+            if old_font is None:
+                old_font = previous
+            indent = round(indent_points * dpi_x / 72)
+            if style == "spacer":
+                height = round(points * dpi_y / 72)
+            else:
+                measure = wintypes.RECT(left + indent, y, content_right, content_bottom)
+                height = user32.DrawTextW(hdc, value, -1, ctypes.byref(measure), DT_WORDBREAK | DT_CALCRECT | DT_NOPREFIX)
+            gap_pixels = round(gap * dpi_y / 72)
+            if y + height + gap_pixels > content_bottom:
+                gdi32.EndPage(hdc)
+                if gdi32.StartPage(hdc) <= 0:
+                    raise OSError("Windows could not start the next printed page.")
+                y = top
+            if style != "spacer":
+                target = wintypes.RECT(left + indent, y, content_right, y + height + 2)
+                user32.DrawTextW(hdc, value, -1, ctypes.byref(target), DT_WORDBREAK | DT_NOPREFIX)
+            y += height + gap_pixels
+        gdi32.EndPage(hdc)
+        if gdi32.EndDoc(hdc) <= 0:
+            raise OSError("Windows could not complete the print job.")
+        document_started = False
+        return True
+    except Exception:
+        if document_started:
+            gdi32.AbortDoc(hdc)
+        raise
+    finally:
+        if old_font:
+            gdi32.SelectObject(hdc, old_font)
+        for font in fonts.values():
+            if font:
+                gdi32.DeleteObject(font)
+        if hdc:
+            gdi32.DeleteDC(hdc)
+        if pd.hDevMode:
+            kernel32.GlobalFree(pd.hDevMode)
+        if pd.hDevNames:
+            kernel32.GlobalFree(pd.hDevNames)
+
+
+def export_practice_pdf(filename: str | Path, practice, coach: str | None = None) -> None:
     """Write the practice as a valid multi-page PDF using built-in fonts."""
     page_width, page_height = 612, 792
     left, top, bottom = 54, 738, 54
@@ -97,7 +259,7 @@ def export_practice_pdf(filename: str | Path, practice) -> None:
         encoded = text.encode("cp1252", errors="replace").decode("cp1252")
         return encoded.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
-    for style, text in build_practice_pdf_lines(practice):
+    for style, text in build_practice_pdf_lines(practice, coach):
         font, size, leading = styles[style]
         width = 72 if style in {"detail", "muted"} else 82
         wrapped = textwrap.wrap(text, width=width, break_long_words=False) or [""]

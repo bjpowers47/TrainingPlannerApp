@@ -20,7 +20,10 @@ DEFAULT_CONFIG = {
     "theme": "dark",
     "last_workbook": "",
     "window_width": 1400,
-    "window_height": 900
+    "window_height": 900,
+    "title": "Training Manager",
+    "head_coach": "",
+    "assistant_coaches": [],
 }
 
 

@@ -1,7 +1,5 @@
 # Version 0.3.0
 
-- Added Development Library page
-- Added Practice Builder page
-- Added Practice model
-- Connected Practice Builder to Practice model
-- Added Practice Summarycu
+Remove "Practice Date" field and label
+Remove "Team" field and label
+A goback key in Drill Manager from the Administration page +—

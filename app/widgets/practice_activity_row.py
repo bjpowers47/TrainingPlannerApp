@@ -48,10 +48,10 @@ class PracticeActivityRow(ctk.CTkFrame):
         )
         self.duration_var = self._make_value_var(duration_text)
         self.sets_var = self._make_value_var(activity.sets)
-        self.reps_var = self._make_value_var(activity.reps)
         self.coach_notes_var = self._make_value_var(activity.coach_notes)
-        self.work_var = self._make_value_var(activity.work_seconds)
-        self.rest_var = self._make_value_var(activity.rest_seconds)
+        self.work_var = self._make_value_var(activity.work_minutes)
+        self.rest_var = self._make_value_var(activity.rest_minutes)
+        self.print_details_var = ctk.BooleanVar(value=activity.print_details)
         
         self.build_ui()
         self.bind_value_changes()
@@ -163,30 +163,36 @@ class PracticeActivityRow(ctk.CTkFrame):
         self._build_value_field(
             execution_frame,
             column=2,
-            label="Reps",
-            variable=self.reps_var,
-        )
-        self._build_value_field(
-            execution_frame,
-            column=3,
             label="Note",
             variable=self.coach_notes_var,
             width=180,
         )
         self._build_value_field(
             execution_frame,
-            column=4,
+            column=3,
             label="Work",
             variable=self.work_var,
-            suffix="sec",
+            suffix="min",
         )
         self._build_value_field(
             execution_frame,
-            column=5,
+            column=4,
             label="Rest",
             variable=self.rest_var,
-            suffix="sec",
+            suffix="min",
         )
+        ctk.CTkCheckBox(
+            execution_frame,
+            text="Print Details",
+            variable=self.print_details_var,
+            command=self.save_print_details,
+        ).grid(row=0, column=5, sticky="w", padx=(8, 0))
+
+    def save_print_details(self) -> None:
+        """Store whether this drill's descriptive details should be printed."""
+        self.activity.print_details = self.print_details_var.get()
+        if self.activity_changed_callback is not None:
+            self.activity_changed_callback()
 
     def _build_value_field(
         self,
@@ -249,10 +255,9 @@ class PracticeActivityRow(ctk.CTkFrame):
 
         bindings = (
             (self.sets_var, "sets"),
-            (self.reps_var, "reps"),
             (self.coach_notes_var, "coach_notes"),
-            (self.work_var, "work_seconds"),
-            (self.rest_var, "rest_seconds"),
+            (self.work_var, "work_minutes"),
+            (self.rest_var, "rest_minutes"),
         )
 
         for variable, attribute_name in bindings:
@@ -271,9 +276,7 @@ class PracticeActivityRow(ctk.CTkFrame):
 
         text = variable.get().strip()
 
-        if attribute_name == "reps":
-            value = text[:20]
-        elif attribute_name == "coach_notes":
+        if attribute_name == "coach_notes":
             value = text[:200]
 
         else:
@@ -281,11 +284,13 @@ class PracticeActivityRow(ctk.CTkFrame):
                 value = None
             else:
                 try:
-                    value = int(text)
+                    value = float(text)
                 except ValueError:
                     return
 
                 if value < 0:
+                    return
+                if attribute_name in ("work_minutes", "rest_minutes") and value * 2 != int(value * 2):
                     return
 
         setattr(
@@ -296,15 +301,13 @@ class PracticeActivityRow(ctk.CTkFrame):
 
         if attribute_name in (
             "sets",
-            "work_seconds",
-            "rest_seconds",
+            "work_minutes",
+            "rest_minutes",
         ):
             self.refresh_duration()
 
         if self.activity_changed_callback is not None:
             self.activity_changed_callback()
-            if self.activity_changed_callback is not None:
-                self.activity_changed_callback()
     def refresh_duration(self) -> None:
         """Recalculate and display the activity duration."""
 

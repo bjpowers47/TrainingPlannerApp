@@ -27,11 +27,12 @@ class PracticeActivity:
     drill: Drill
 
     sets: int = 1
-    reps: str = ""
-    work_seconds: int | None = 0
-    rest_seconds: int | None = 0
+    reps: str = ""  # retained only for loading older practice files
+    work_seconds: float | None = 0
+    rest_seconds: float | None = 0
 
     coach_notes: str = ""
+    print_details: bool = False
 
     @classmethod
     def from_drill(cls, drill: Drill) -> "PracticeActivity":
@@ -61,6 +62,22 @@ class PracticeActivity:
         sets = self.sets or 1
 
         return sets * (work_seconds + rest_seconds)
+
+    @property
+    def work_minutes(self) -> float:
+        return (self.work_seconds or 0) / 60
+
+    @work_minutes.setter
+    def work_minutes(self, value: float | None) -> None:
+        self.work_seconds = None if value is None else value * 60
+
+    @property
+    def rest_minutes(self) -> float:
+        return (self.rest_seconds or 0) / 60
+
+    @rest_minutes.setter
+    def rest_minutes(self, value: float | None) -> None:
+        self.rest_seconds = None if value is None else value * 60
 
     def duration_minutes(self) -> float:
         return self.duration_seconds() / 60

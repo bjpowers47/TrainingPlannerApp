@@ -66,6 +66,7 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 development_block_id INTEGER NOT NULL,
                 technical_focus_id INTEGER,
+                coaching_focus TEXT NOT NULL DEFAULT '',
                 name TEXT NOT NULL,
                 purpose TEXT NOT NULL DEFAULT '',
                 duration_minutes INTEGER NOT NULL DEFAULT 0,
@@ -185,9 +186,15 @@ class Database:
             );
             """
         )
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(drills)")}
+        if "coaching_focus" not in columns:
+            connection.execute("ALTER TABLE drills ADD COLUMN coaching_focus TEXT NOT NULL DEFAULT ''")
 
     def _seed_development_blocks(self, connection: sqlite3.Connection) -> None:
-        """Seed the six permanent Development Blocks."""
+        """Seed the initial Development Blocks for a new database."""
+        existing_count = connection.execute(
+            "SELECT COUNT(*) FROM development_blocks"
+        ).fetchone()[0]
         development_blocks = [
             ("Ball Mastery", "Confidence, creativity, and comfort with the ball.", 1),
             ("Receiving & Passing", "First touch, passing quality, and support play.", 2),
@@ -196,6 +203,46 @@ class Database:
             ("Finishing", "Composure and technique in front of goal.", 5),
             ("Group Play", "Decision-making, possession, transition, and teamwork.", 6),
         ]
+
+        if existing_count:
+            # Older releases re-seeded a default row after that block was
+            # renamed. Remove only the resulting unreferenced duplicate that
+            # shares the renamed block's original display position.
+            for name, _description, display_order in development_blocks:
+                connection.execute(
+                    """
+                    DELETE FROM development_blocks
+                    WHERE name = ?
+                      AND display_order = ?
+                      AND EXISTS (
+                          SELECT 1 FROM development_blocks replacement
+                          WHERE replacement.display_order = ?
+                            AND replacement.id != development_blocks.id
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1 FROM drills
+                          WHERE development_block_id = development_blocks.id
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1 FROM technical_focuses
+                          WHERE development_block_id = development_blocks.id
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1 FROM development_snapshots
+                          WHERE development_block_id = development_blocks.id
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1 FROM observations
+                          WHERE development_block_id = development_blocks.id
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1 FROM practice_blocks
+                          WHERE development_block_id = development_blocks.id
+                      )
+                    """,
+                    (name, display_order, display_order),
+                )
+            return
 
         for name, description, display_order in development_blocks:
             connection.execute(

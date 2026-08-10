@@ -39,6 +39,7 @@ class DevelopmentBlock:
     name: str
     description: str
     display_order: int
+    is_active: bool = True
 
     def __str__(self) -> str:
         """Return a friendly display name."""

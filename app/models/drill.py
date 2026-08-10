@@ -21,6 +21,7 @@ class Drill:
     name: str
     development_block_id: int
     technical_focus_id: int | None = None
+    coaching_focus: str = ""
     purpose: str = ""
     duration_minutes: int = 0
     recommended_players: str = ""

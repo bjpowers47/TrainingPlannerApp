@@ -1,5 +1,6 @@
 import sqlite3
-from datetime import date
+from datetime import date, datetime
+from pathlib import Path
 
 import customtkinter as ctk
 from PIL import Image
@@ -14,11 +15,24 @@ from app.pages.development_library_page import DevelopmentLibraryPage
 from app.pages.practice_builder_page import PracticeBuilderPage
 from app.pages.administration_page import AdministrationPage
 from app.pages.drill_manager_page import DrillManagerPage
+from app.pages.configuration_page import ConfigurationPage
 from app.models.practice import Practice
 from app.models.player_development import (
     get_block_by_id,
     get_block_by_name,
 )
+
+
+def _to_int_or_none(value):
+    """Parse an optional numeric form value without accepting invalid input."""
+    if value is None:
+        return None
+
+    value = str(value).strip()
+    if value.casefold() in {"", "none", "null"}:
+        return None
+
+    return int(float(value))
 from app.pages.drill_editor_page import DrillEditorPage
 from app.models.drill import Drill
 from app.services.drill_spreadsheet_service import (
@@ -28,7 +42,7 @@ from app.services.drill_spreadsheet_service import (
 )
 from app.config import BACKUP_DIR, RESOURCE_ROOT, ROOT
 from app.services.database_maintenance_service import DatabaseMaintenanceService
-from app.services.practice_pdf_service import export_practice_pdf
+from app.services.practice_pdf_service import print_practice
 
 class SoccerTrainingManager(ctk.CTk):
 # ==========================================================
@@ -72,13 +86,15 @@ class SoccerTrainingManager(ctk.CTk):
 
     def build_ui(self):
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        self.banner = ctk.CTkLabel(self, text=self.config_manager.data.get("title", "Training Manager")[:40], font=("Segoe UI", 22, "bold"), height=42)
+        self.banner.grid(row=0, column=0, columnspan=2, sticky="ew")
 
         self.sidebar = ctk.CTkFrame(self, width=220)
-        self.sidebar.grid(row=0, column=0, sticky="ns")
+        self.sidebar.grid(row=1, column=0, sticky="ns")
 
         self.content = ctk.CTkFrame(self)
-        self.content.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.content.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
 
         self.sidebar_logo = ctk.CTkImage(
             light_image=Image.open(self.logo_path),
@@ -100,14 +116,8 @@ class SoccerTrainingManager(ctk.CTk):
             command=self.show_dashboard
         ).pack(fill="x", padx=10, pady=5)
 
-        ctk.CTkButton(
-            self.sidebar,
-            text="Open Workbook",
-            command=self.load_workbook
-        ).pack(side="bottom", fill="x", padx=10, pady=20)
-
         self.status = ctk.CTkLabel(self, text="Ready", anchor="w")
-        self.status.grid(row=1, column=0, columnspan=2, sticky="ew")
+        self.status.grid(row=2, column=0, columnspan=2, sticky="ew")
 
         ctk.CTkButton(
             self.sidebar,
@@ -140,15 +150,6 @@ class SoccerTrainingManager(ctk.CTk):
             padx=15,
             pady=5,
         ) 
-        ctk.CTkButton(
-            self.sidebar,
-            text="Save Practice",
-            command=self.save_practice,
-        ).pack(
-            fill="x",
-            padx=15,
-            pady=5,
-        )    
         administration_button = ctk.CTkButton(
             self.sidebar,
             text="Administration",
@@ -184,7 +185,8 @@ class SoccerTrainingManager(ctk.CTk):
             "end",
             "Welcome to Training Manager\n\n"
             "Version 0.2.1\n\n"
-            "Load an Excel workbook to begin."
+            f"Head Coach: {self.config_manager.data.get('head_coach', '') or 'Not configured'}\n"
+            "Assistant Coaches: " + (", ".join(self.config_manager.data.get("assistant_coaches", [])) or "None configured")
         )
     def show_training(self):
         self.clear_content()
@@ -216,17 +218,21 @@ class SoccerTrainingManager(ctk.CTk):
 
         page = DevelopmentLibraryPage(
             self.content,
-            self.development_library_service
+            self.development_library_service,
+            blocks=self.repositories.development_blocks.list_all(),
         )
 
         page.pack(fill="both", expand=True)
     def show_practice_builder(self):
         self.clear_content()
+        self.current_practice.configured_blocks = [block.name for block in self.repositories.development_blocks.list_all()]
         self.practice_builder_page = PracticeBuilderPage(
             self.content,
             self.current_practice,
             self.show_development_library_for_block,
-            self.save_practice_pdf,
+            export_pdf_callback=self.save_practice_pdf,
+            save_practice_callback=self.save_practice,
+            coaches=self._configured_coaches(),
         )
         self.practice_builder_page.pack(
             fill="both",
@@ -248,7 +254,7 @@ class SoccerTrainingManager(ctk.CTk):
     def show_development_library_for_block(self, block):
         """Open the library for a selected development block."""
 
-        selected_development_block = get_block_by_name(block)
+        selected_development_block = self.repositories.development_blocks.get_by_name(block)
 
         if selected_development_block is None:
             print(f"Unknown development block: {block}")
@@ -262,6 +268,7 @@ class SoccerTrainingManager(ctk.CTk):
             selected_block=block,
             add_to_practice_callback=self.add_drills_to_practice,
             cancel_callback=self.show_practice_builder,
+            blocks=self.repositories.development_blocks.list_all(),
         )
 
         page.pack(fill="both", expand=True)
@@ -309,8 +316,24 @@ class SoccerTrainingManager(ctk.CTk):
         if not self.practice_builder_page.validate_practice_name():
             return
 
+        invalid_characters = '<>:"/\\|?*'
+        safe_name = "".join(
+            "_" if character in invalid_characters or ord(character) < 32 else character
+            for character in self.current_practice.name.strip()
+        ).rstrip(". ")[:100].rstrip(". ")
+        reserved_names = {"CON", "PRN", "AUX", "NUL"} | {
+            f"{prefix}{number}"
+            for prefix in ("COM", "LPT")
+            for number in range(1, 10)
+        }
+        if safe_name.upper() in reserved_names:
+            safe_name = f"_{safe_name}"
+        safe_name = safe_name or "practice"
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
         filename = filedialog.asksaveasfilename(
             title="Save Practice",
+            initialfile=f"{safe_name}_{timestamp}.json",
             defaultextension=".json",
             filetypes=[
                 ("JSON Files", "*.json"),
@@ -324,34 +347,19 @@ class SoccerTrainingManager(ctk.CTk):
         self.current_practice.save_to_json(filename)
 
     def save_practice_pdf(self, practice):
-        """Ask for a PDF destination and export the current practice plan."""
-        safe_name = "".join(
-            character if character.isalnum() or character in ("-", "_") else "_"
-            for character in (practice.name.strip() or "practice_plan")
-        ).strip("_") or "practice_plan"
-        filename = filedialog.asksaveasfilename(
-            title="Save Practice Plan as PDF",
-            initialfile=f"{safe_name}_{date.today().isoformat()}.pdf",
-            defaultextension=".pdf",
-            filetypes=[("PDF Document", "*.pdf")],
-        )
-        if not filename:
-            self.status.configure(text="PDF export canceled")
-            return
+        """Open the print dialog for the current practice plan."""
         try:
-            export_practice_pdf(filename, practice)
+            head_coach = self.config_manager.data.get("head_coach", "")
+            practice.head_coach = head_coach
+            printed = print_practice(practice)
         except Exception as error:
-            self.status.configure(text="PDF export failed")
+            self.status.configure(text="Print failed")
             messagebox.showerror(
-                "PDF Export Failed",
-                f"The practice PDF could not be created.\n\n{error}",
+                "Print Failed",
+                f"The practice plan could not be opened for printing.\n\n{error}",
             )
             return
-        self.status.configure(text=f"PDF saved: {filename}")
-        messagebox.showinfo(
-            "Practice PDF Saved",
-            f"The practice plan was saved successfully.\n\n{filename}",
-        )
+        self.status.configure(text="Practice sent to printer" if printed else "Print canceled")
 
 # ==========================================================
 # Administration
@@ -370,11 +378,23 @@ class SoccerTrainingManager(ctk.CTk):
             export_spreadsheet_callback=self.export_drill_spreadsheet,
             database_maintenance_callback=self.run_database_maintenance,
             restore_database_callback=self.restore_database_backup,
+            configuration_callback=self.show_configuration,
         )
         page.pack(
             fill="both",
             expand=True,
         )
+
+    def _configured_coaches(self):
+        values = [self.config_manager.data.get("head_coach", ""), *self.config_manager.data.get("assistant_coaches", [])]
+        return [value for value in values if value]
+
+    def show_configuration(self):
+        self.clear_content()
+        ConfigurationPage(self.content, self.config_manager, self.repositories.development_blocks, self._configuration_saved).pack(fill="both", expand=True)
+
+    def _configuration_saved(self):
+        self.banner.configure(text=self.config_manager.data.get("title", "Training Manager")[:40])
 
     def run_database_maintenance(self):
         """Check database health, then offer backup and optimization."""
@@ -490,7 +510,11 @@ class SoccerTrainingManager(ctk.CTk):
         if not filename:
             return
         try:
-            exported = export_spreadsheet(filename, self.repositories.drills)
+            exported = export_spreadsheet(
+                filename,
+                self.repositories.drills,
+                self.repositories.development_blocks,
+            )
         except Exception as error:
             messagebox.showerror(
                 "Drill Export Failed",
@@ -510,6 +534,7 @@ class SoccerTrainingManager(ctk.CTk):
             self.development_library_service,
             on_new_drill=self.show_drill_editor,
             on_edit_drill=self.show_drill_editor,
+            blocks=self.repositories.development_blocks.list_all(),
         )
 
         page.pack(fill="both", expand=True)
@@ -521,22 +546,15 @@ class SoccerTrainingManager(ctk.CTk):
             drill=drill,
             on_save=self.handle_drill_editor_save,
             on_cancel=self.show_drill_manager,
+            blocks=self.repositories.development_blocks.list_all(),
         )
 
         page.pack(fill="both", expand=True)
     def handle_drill_editor_save(self, data):
         """Create a new drill or update an existing drill."""
-
-        def to_int_or_none(value):
-            value = str(value).strip()
-
-            if value == "":
-                return None
-
-            return int(value)
         existing_drills = self.repositories.drills.get_all()
 
-        block = get_block_by_id(
+        block = self.repositories.development_blocks.get_by_id(
             data["development_block_id"]
         )
 
@@ -571,6 +589,7 @@ class SoccerTrainingManager(ctk.CTk):
             drill.technical_focus_id = data.get(
                 "technical_focus_id"
             )
+            drill.coaching_focus = data.get("technical_focus", "")[:50]
             drill.purpose = data["purpose"].strip()
             drill.duration_minutes = int(
                 data["duration_minutes"] or 0
@@ -580,17 +599,22 @@ class SoccerTrainingManager(ctk.CTk):
                 False,
             )
 
-            drill.sets = to_int_or_none(data.get("sets", ""))
-            drill.reps = to_int_or_none(data.get("reps", ""))
-            drill.work_seconds = to_int_or_none(
+            drill.sets = _to_int_or_none(data.get("sets", ""))
+            drill.reps = _to_int_or_none(data.get("reps", ""))
+            drill.work_seconds = _to_int_or_none(
                 data.get("work_seconds", "")
             )
-            drill.rest_seconds = to_int_or_none(
+            drill.rest_seconds = _to_int_or_none(
                 data.get("rest_seconds", "")
             )
             drill.recommended_players = data[
                 "recommended_players"
             ].strip()
+            drill.equipment = list(data.get("equipment", []))
+            drill.coaching_points = list(data.get("coaching_points", []))
+            drill.progressions = list(data.get("progressions", []))
+            drill.variations = list(data.get("variations", []))
+            drill.notes = data.get("notes", "").strip()
 
             action = "Updated"
 
@@ -598,10 +622,10 @@ class SoccerTrainingManager(ctk.CTk):
             #
             # Create a new drill
             #
-            next_id = max(
-                (drill.id for drill in existing_drills),
-                default=0,
-            ) + 1
+            # Archived drills are intentionally omitted by get_all().  Let the
+            # repository allocate against every stored row so a new drill can
+            # never overwrite an archived ID and remain hidden.
+            next_id = self.repositories.drills.get_next_id()
 
             drill = Drill(
                 id=next_id,
@@ -610,6 +634,7 @@ class SoccerTrainingManager(ctk.CTk):
                 technical_focus_id=data.get(
                     "technical_focus_id"
                 ),
+                coaching_focus=data.get("technical_focus", "")[:50],
                 purpose=data["purpose"].strip(),
                 duration_minutes=int(
                     data["duration_minutes"] or 0
@@ -622,25 +647,32 @@ class SoccerTrainingManager(ctk.CTk):
                     "use_execution_details",
                     False,
                 ),
-                sets=to_int_or_none(data.get("sets", "")),
-                reps=to_int_or_none(data.get("reps", "")),
-                work_seconds=to_int_or_none(
+                sets=_to_int_or_none(data.get("sets", "")),
+                reps=_to_int_or_none(data.get("reps", "")),
+                work_seconds=_to_int_or_none(
                     data.get("work_seconds", "")
                 ),
-                rest_seconds=to_int_or_none(
+                rest_seconds=_to_int_or_none(
                     data.get("rest_seconds", "")
                 ),
+                equipment=list(data.get("equipment", [])),
+                coaching_points=list(data.get("coaching_points", [])),
+                progressions=list(data.get("progressions", [])),
+                variations=list(data.get("variations", [])),
+                notes=data.get("notes", "").strip(),
             )
 
             action = "Created"
 
         self.repositories.drills.save(drill)
 
-        print(
-            f"{action} drill: {drill.name} "
-            f"(ID {drill.id}, "
-            f"block ID {drill.development_block_id})"
-        )
+        saved_drill = self.repositories.drills.get_by_id(drill.id)
+        if saved_drill is None or not saved_drill.active:
+            raise RuntimeError(
+                "The database did not return the saved drill. No changes were made to the screen."
+            )
+
+        self.status.configure(text=f'{action} drill: {saved_drill.name}')
 
         self.show_drill_manager()
 
@@ -666,4 +698,3 @@ class SoccerTrainingManager(ctk.CTk):
 
         if self.cancel_callback is not None:
             self.cancel_callback()  
-
