@@ -1,5 +1,5 @@
 """
-Coach's Training Manager
+Training Planner Ap
 ------------------------
 
 Module:
@@ -52,5 +52,8 @@ class DevelopmentLibraryService:
         return self._drill_repository.get_by_technical_focus(focus_id)
 
     def delete_drill(self, drill_id: int) -> bool:
-        """Permanently remove a drill from the Development Library."""
-        return self._drill_repository.delete(drill_id)
+        """Archive a drill so the action remains reversible."""
+        return self._drill_repository.archive(drill_id)
+
+    def restore_drill(self, drill_id: int) -> bool:
+        return self._drill_repository.restore(drill_id)

@@ -22,6 +22,9 @@ class DrillManagerPage(ctk.CTkFrame):
         # ``None`` means no block configuration was supplied. An empty list is
         # valid live configuration and must not restore hard-coded blocks.
         self.available_blocks = DEVELOPMENT_BLOCKS if blocks is None else blocks
+        self.search_var = ctk.StringVar()
+        self.block_filter_var = ctk.StringVar(value="All Blocks")
+        self.last_archived = None
 
         self.build_ui()
 
@@ -41,11 +44,11 @@ class DrillManagerPage(ctk.CTkFrame):
             print("No Edit Drill callback was provided")
 
     def _handle_delete_drill(self, drill):
-        """Confirm and permanently delete the requested drill."""
+        """Confirm and archive the requested drill."""
         confirmed = messagebox.askyesno(
             "Delete Drill",
-            f'Delete "{drill.name}"?\n\n'
-            "This permanently removes it from the drill library and cannot be undone.",
+            f'Remove "{drill.name}" from the active drill library?\n\n'
+            "You can undo this action immediately afterward.",
         )
         if not confirmed:
             return
@@ -56,7 +59,15 @@ class DrillManagerPage(ctk.CTkFrame):
                 "This drill could not be found. The list will be refreshed.",
             )
 
+        self.last_archived = drill
+        self.undo_button.pack(side="right", padx=(0, 8))
         self._refresh_list()
+
+    def _undo_archive(self):
+        if self.last_archived and self.drill_service.restore_drill(self.last_archived.id):
+            self.last_archived = None
+            self.undo_button.pack_forget()
+            self._refresh_list()
 
     def _refresh_list(self):
         """Reload the drill list after a change."""
@@ -69,12 +80,21 @@ class DrillManagerPage(ctk.CTkFrame):
         """Load drills from the service and display them."""
 
         grouped = self.drill_service.get_drills_by_block()
+        query = self.search_var.get().strip().casefold()
+        selected_block = self.block_filter_var.get()
 
         # Use the same live database blocks as the editor. Configuration can
         # delete and recreate a block with a new ID, so the legacy constants
         # can no longer reliably group newly saved drills.
         for block in self.available_blocks:
             drills = grouped.get(block.id, [])
+            if selected_block != "All Blocks" and block.name != selected_block:
+                continue
+            if query:
+                drills = [drill for drill in drills if query in " ".join((
+                    drill.name or "", drill.purpose or "", drill.coaching_focus or "",
+                    " ".join(drill.equipment), " ".join(drill.coaching_points),
+                )).casefold()]
             icon = getattr(block, "icon", None)
             icon_prefix = f"{icon} " if icon else ""
 
@@ -191,6 +211,9 @@ class DrillManagerPage(ctk.CTkFrame):
             command=self._handle_new_drill,
         )
         new_button.pack(side="right")
+        self.undo_button = ctk.CTkButton(
+            header, text="Undo Remove", width=105, command=self._undo_archive
+        )
 
         subtitle = ctk.CTkLabel(
             self,
@@ -203,15 +226,22 @@ class DrillManagerPage(ctk.CTkFrame):
             pady=(0, 10),
         )
 
+        filters = ctk.CTkFrame(self, fg_color="transparent")
+        filters.pack(fill="x", padx=30, pady=(10, 10))
         search = ctk.CTkEntry(
-            self,
+            filters,
             placeholder_text="Search drills...",
+            textvariable=self.search_var,
         )
-        search.pack(
-            fill="x",
-            padx=30,
-            pady=(10, 10),
-        )
+        search.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        ctk.CTkOptionMenu(
+            filters,
+            variable=self.block_filter_var,
+            values=["All Blocks", *[block.name for block in self.available_blocks]],
+            command=lambda _value: self._refresh_list(),
+            width=190,
+        ).pack(side="right")
+        self.search_var.trace_add("write", lambda *_args: self._refresh_list())
 
         self.list_frame = ctk.CTkScrollableFrame(self)
         self.list_frame.pack(

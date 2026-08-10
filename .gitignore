@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+backups/
+data/*.db
+data/practice_autosave.json
+practices/
+*.spec.bak

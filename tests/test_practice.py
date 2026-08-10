@@ -158,9 +158,9 @@ def test_practice_activity_is_saved_and_loaded():
     )[0]
 
     assert loaded_activity.name == "Ball Taps"
-    assert loaded_activity.duration_minutes == 10
-    assert loaded_activity.repetitions == 1
-    assert loaded_activity.rest_seconds == 30
+    assert loaded_activity.duration_minutes() == 10
+    assert loaded_activity.reps == practice.get_activities(phase)[0].reps
+    assert loaded_activity.rest_seconds == practice.get_activities(phase)[0].rest_seconds
 
 if __name__ == "__main__":
     test_practice()

@@ -1,5 +1,5 @@
 """
-Coach's Training Manager
+Training Planner Ap
 ------------------------
 
 Module:
@@ -18,7 +18,7 @@ from app.models.player_development import (
 from app.widgets.practice_activity_row import PracticeActivityRow
 
 class PracticeBuilderPage(ctk.CTkFrame):
-    """Build and manage a soccer practice."""
+    """Build and manage a training practice."""
 
     # ==========================================================
     # Initialization
@@ -232,6 +232,10 @@ class PracticeBuilderPage(ctk.CTkFrame):
             "<KeyRelease>", lambda _event: self.save_warm_up_duration()
         )
         ctk.CTkLabel(duration_frame, text="min").pack(side="left")
+        self.warm_up_error = ctk.CTkLabel(
+            duration_frame, text="", text_color="#ff8a80"
+        )
+        self.warm_up_error.pack(side="left", padx=(10, 0))
 
     def build_summary(self):
         """Build the complete Practice Summary section."""
@@ -372,7 +376,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             pady=8,
         )
 
-        self.practice_duration_var = ctk.StringVar(value="90")
+        self.practice_duration_var = ctk.StringVar(value=f"{self.practice.target_minutes:g}")
 
         duration_frame = ctk.CTkFrame(
             info_frame,
@@ -405,6 +409,10 @@ class PracticeBuilderPage(ctk.CTkFrame):
             side="left",
             padx=(6, 0),
         )
+        self.practice_duration_error = ctk.CTkLabel(
+            duration_frame, text="", text_color="#ff8a80"
+        )
+        self.practice_duration_error.pack(side="left", padx=(10, 0))
 
         ctk.CTkLabel(
             info_frame,
@@ -461,22 +469,33 @@ class PracticeBuilderPage(ctk.CTkFrame):
             ).strip()
         )
         self.save_warm_up_duration()
+        try:
+            duration = float(self.practice_duration_var.get())
+            if duration > 0:
+                self.practice.target_minutes = duration
+        except ValueError:
+            pass
 
     def save_warm_up_duration(self) -> None:
         """Copy a valid non-negative warm-up duration into the practice."""
         text = self.warm_up_duration_var.get().strip()
+        error = ""
         if text == "":
             self.practice.warm_up_minutes = 0
         else:
             try:
                 minutes = float(text)
             except ValueError:
+                self.warm_up_error.configure(text="Enter a number")
                 return
             if minutes < 0:
+                self.warm_up_error.configure(text="Cannot be negative")
                 return
             if minutes * 2 != int(minutes * 2):
+                self.warm_up_error.configure(text="Use whole or half minutes")
                 return
             self.practice.warm_up_minutes = minutes
+        self.warm_up_error.configure(text=error)
         self.refresh_summary()
 
     def validate_practice_name(self) -> bool:
@@ -503,20 +522,29 @@ class PracticeBuilderPage(ctk.CTkFrame):
             target_minutes = float(self.practice_duration_var.get())
         except ValueError:
             target_minutes = 0
+        error = "" if target_minutes > 0 else "Enter a duration greater than zero"
+        if hasattr(self, "practice_duration_error"):
+            self.practice_duration_error.configure(text=error)
 
         for coach in self.coaches:
             assigned = [b for b, names in self.practice.block_coaches.items() if coach in names]
             count = sum(len(self.practice.activities.get(b, [])) for b in assigned)
             minutes = sum(a.duration_minutes() for b in assigned for a in self.practice.activities.get(b, []))
             remaining = target_minutes - self.practice.warm_up_minutes - minutes
-            percent = min(100, (minutes + self.practice.warm_up_minutes) / target_minutes * 100) if target_minutes else 0
-            self.coach_progress[coach].set(percent / 100)
+            raw_percent = (minutes + self.practice.warm_up_minutes) / target_minutes * 100 if target_minutes else 0
+            self.coach_progress[coach].set(min(100, raw_percent) / 100)
             values = self.coach_summary_values[coach]
             values["activities"].configure(text=str(count))
             values["warm_up"].configure(text=f"{self.practice.warm_up_minutes:g} min")
             values["planned"].configure(text=f"{minutes:g} min")
-            values["remaining"].configure(text=f"{remaining:g} min")
-            values["progress"].configure(text=f"{percent:.0f}%")
+            values["remaining"].configure(
+                text=f"{remaining:g} min",
+                text_color="#ff8a80" if remaining < 0 else ("gray10", "gray90"),
+            )
+            values["progress"].configure(
+                text=f"{raw_percent:.0f}%" + (" over" if raw_percent > 100 else ""),
+                text_color="#ff8a80" if raw_percent > 100 else ("gray10", "gray90"),
+            )
 
     def _assign_coach(self, block, coach, selected):
         names = self.practice.block_coaches.setdefault(block, [])

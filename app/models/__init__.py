@@ -1,5 +1,5 @@
 """
-Domain models for Coach's Training Manager.
+Domain models for Training Planner Ap.
 
 These classes represent real coaching concepts, not database tables.
 """

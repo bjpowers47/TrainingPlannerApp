@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import closing
 
 from app.database import Database
 from app.models.drill import Drill
@@ -63,32 +64,33 @@ class DrillRepository:
             self._encode(drill.coaching_points), self._encode(drill.progressions),
             self._encode(drill.variations), drill.notes, int(drill.active), drill.id,
         )
-        with self._database.connect() as connection:
-            exists = connection.execute(
-                "SELECT 1 FROM drills WHERE id = ?", (drill.id,)
-            ).fetchone()
-            if exists:
-                connection.execute(
-                    """UPDATE drills SET development_block_id=?, technical_focus_id=?,
-                    coaching_focus=?, name=?, purpose=?, duration_minutes=?, recommended_players=?,
-                    use_execution_details=?, sets=?, reps=?, work_seconds=?, rest_seconds=?,
-                    equipment=?, coaching_points=?, progressions=?, variations=?, notes=?,
-                    is_active=? WHERE id=?""",
-                    values,
-                )
-            else:
-                connection.execute(
-                    """INSERT INTO drills (id, development_block_id, technical_focus_id,
-                    coaching_focus, name, purpose, duration_minutes, recommended_players,
-                    use_execution_details, sets, reps, work_seconds, rest_seconds,
-                    equipment, coaching_points, progressions, variations, notes, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (drill.id,) + values[:-1],
-                )
+        with closing(self._database.connect()) as connection:
+            with connection:
+                exists = connection.execute(
+                    "SELECT 1 FROM drills WHERE id = ?", (drill.id,)
+                ).fetchone()
+                if exists:
+                    connection.execute(
+                        """UPDATE drills SET development_block_id=?, technical_focus_id=?,
+                        coaching_focus=?, name=?, purpose=?, duration_minutes=?, recommended_players=?,
+                        use_execution_details=?, sets=?, reps=?, work_seconds=?, rest_seconds=?,
+                        equipment=?, coaching_points=?, progressions=?, variations=?, notes=?,
+                        is_active=? WHERE id=?""",
+                        values,
+                    )
+                else:
+                    connection.execute(
+                        """INSERT INTO drills (id, development_block_id, technical_focus_id,
+                        coaching_focus, name, purpose, duration_minutes, recommended_players,
+                        use_execution_details, sets, reps, work_seconds, rest_seconds,
+                        equipment, coaching_points, progressions, variations, notes, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (drill.id,) + values[:-1],
+                    )
 
     def get_all(self) -> list[Drill]:
         self._ensure_initialized()
-        with self._database.connect() as connection:
+        with closing(self._database.connect()) as connection:
             rows = connection.execute(
                 "SELECT * FROM drills WHERE is_active = 1 ORDER BY development_block_id, name"
             ).fetchall()
@@ -97,14 +99,27 @@ class DrillRepository:
     def get_next_id(self) -> int:
         """Return an unused ID, including archived drills in the calculation."""
         self._ensure_initialized()
-        with self._database.connect() as connection:
+        with closing(self._database.connect()) as connection:
             return connection.execute(
                 "SELECT COALESCE(MAX(id), 0) + 1 FROM drills"
             ).fetchone()[0]
 
+    def get_import_reference_data(self):
+        """Return public lookup data needed by spreadsheet imports."""
+        self._ensure_initialized()
+        with closing(self._database.connect()) as connection:
+            blocks = connection.execute(
+                "SELECT id, name FROM development_blocks WHERE is_active = 1"
+            ).fetchall()
+            focuses = connection.execute(
+                "SELECT id, development_block_id, name FROM technical_focuses "
+                "WHERE is_active = 1"
+            ).fetchall()
+        return blocks, focuses
+
     def get_by_id(self, drill_id: int) -> Drill | None:
         self._ensure_initialized()
-        with self._database.connect() as connection:
+        with closing(self._database.connect()) as connection:
             row = connection.execute("SELECT * FROM drills WHERE id = ?", (drill_id,)).fetchone()
         return self._to_drill(row) if row else None
 
@@ -122,9 +137,18 @@ class DrillRepository:
         self.save(drill)
         return True
 
+    def restore(self, drill_id: int) -> bool:
+        drill = self.get_by_id(drill_id)
+        if drill is None:
+            return False
+        drill.active = True
+        self.save(drill)
+        return True
+
     def delete(self, drill_id: int) -> bool:
         """Permanently delete a drill from the Development Library."""
         self._ensure_initialized()
-        with self._database.connect() as connection:
-            cursor = connection.execute("DELETE FROM drills WHERE id = ?", (drill_id,))
-            return cursor.rowcount > 0
+        with closing(self._database.connect()) as connection:
+            with connection:
+                cursor = connection.execute("DELETE FROM drills WHERE id = ?", (drill_id,))
+                return cursor.rowcount > 0

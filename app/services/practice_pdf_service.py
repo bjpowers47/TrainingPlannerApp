@@ -7,6 +7,7 @@ import ctypes
 from ctypes import wintypes
 from pathlib import Path
 
+from app.config import training_manager_name
 from app.services.coaching_library import get_coaching_focus_by_id
 
 
@@ -25,7 +26,7 @@ def _duration_text(minutes: float) -> str:
 def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[str, str]]:
     """Build styled logical lines, kept separate for focused validation."""
     lines: list[tuple[str, str]] = []
-    lines.append(("title", _clean(practice.name) or "Soccer Practice Plan"))
+    lines.append(("title", _clean(practice.name) or f"{training_manager_name(getattr(practice, 'sport', ''))} Practice Plan"))
     if coach:
         lines.append(("normal", f"Coach: {_clean(coach)}"))
     elif _clean(getattr(practice, "head_coach", "")):
@@ -185,7 +186,7 @@ def print_practice(practice, coach: str | None = None) -> bool:
             fonts[style] = gdi32.CreateFontW(
                 height, 0, 0, 0, weight, 0, 0, 0, 1, 0, 0, 0, 0, "Arial"
             )
-        doc = DOCINFOW(ctypes.sizeof(DOCINFOW), _clean(practice.name) or "Soccer Practice Plan", None, None, 0)
+        doc = DOCINFOW(ctypes.sizeof(DOCINFOW), _clean(practice.name) or f"{training_manager_name(getattr(practice, 'sport', ''))} Practice Plan", None, None, 0)
         if gdi32.StartDocW(hdc, ctypes.byref(doc)) <= 0:
             raise OSError("Windows could not start the print job.")
         document_started = True

@@ -68,9 +68,14 @@ class PracticePdfServiceTests(unittest.TestCase):
             filename = Path(folder) / "empty.pdf"
             export_practice_pdf(filename, practice)
             content = filename.read_bytes()
-        self.assertIn(b"Soccer Practice Plan", content)
+        self.assertIn(b"Training Manager Practice Plan", content)
         self.assertIn(b"No activities planned.", content)
         self.assertIn(b"Total Planned Time: 0 min", content)
+
+    def test_configured_sport_prefixes_training_manager_title(self):
+        practice = Practice(sport="Basketball")
+        lines = build_practice_pdf_lines(practice)
+        self.assertEqual(lines[0], ("title", "Basketball Training Manager Practice Plan"))
 
 
 if __name__ == "__main__":

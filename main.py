@@ -1,8 +1,8 @@
-from app.app import SoccerTrainingManager
+from app.app import TrainingPlannerApp
 
 
 def main():
-    app = SoccerTrainingManager()
+    app = TrainingPlannerApp()
     app.mainloop()
 
 

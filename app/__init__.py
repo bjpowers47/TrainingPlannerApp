@@ -1,5 +1,5 @@
 """
-Coach's Training Manager
+Training Planner Ap
 ------------------------
 
 A coach-centered player development platform.

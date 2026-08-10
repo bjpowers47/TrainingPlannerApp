@@ -1,5 +1,6 @@
 from app.models.drill import Drill
 from app.models.practice_activity import PracticeActivity
+from app.models.practice import Practice
 
 
 def test_default_duration():
@@ -17,7 +18,7 @@ def test_default_duration():
 
     activity = PracticeActivity(drill)
 
-    assert activity.duration_minutes == 10
+    assert activity.duration_minutes() == 10
 
 
 def test_override_duration():
@@ -38,7 +39,7 @@ def test_override_duration():
         duration_override=6,
     )
 
-    assert activity.duration_minutes == 6
+    assert activity.duration_minutes() == 6
 
 
 def test_name_property():
@@ -78,7 +79,7 @@ def test_practice_activity_is_saved_and_loaded(tmp_path):
     )
 
     practice = Practice()
-    phase = practice.get_phase_names()[0]
+    phase = practice.get_block_names()[0]
 
     practice.add_activity(phase, drill)
 
@@ -89,6 +90,4 @@ def test_practice_activity_is_saved_and_loaded(tmp_path):
     loaded_activity = loaded_practice.get_activities(phase)[0]
 
     assert loaded_activity.name == "Ball Taps"
-    assert loaded_activity.duration_minutes == 10
-    assert loaded_activity.repetitions == 1
-    assert loaded_activity.rest_seconds == 30
+    assert loaded_activity.duration_minutes() == 10

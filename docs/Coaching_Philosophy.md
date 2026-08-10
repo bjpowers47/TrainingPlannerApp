@@ -1,8 +1,8 @@
-# Coach's Training Manager
+# Training Planner Ap
 
 ## Coaching Philosophy
 
-Coach's Training Manager is built around one belief:
+Training Planner Ap is built around one belief:
 
 > Develop players first.
 

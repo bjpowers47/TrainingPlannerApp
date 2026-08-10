@@ -1,5 +1,5 @@
 """
-Coach's Training Manager
+Training Planner Ap
 ------------------------
 
 Module:
@@ -27,9 +27,11 @@ class Practice:
     team_name: str = ""
     objective: str = ""
     warm_up_minutes: float = 0
+    target_minutes: float = 90
     selected_blocks: list[str] = field(default_factory=list)
     block_coaches: dict[str, list[str]] = field(default_factory=dict)
     head_coach: str = ""
+    sport: str = ""
     configured_blocks: list[str] = field(default_factory=list, repr=False)
 
     activities: dict[str, list[PracticeActivity]] = field(
@@ -114,9 +116,11 @@ class Practice:
             "team_name": self.team_name,
             "objective": self.objective,
             "warm_up_minutes": self.warm_up_minutes,
+            "target_minutes": self.target_minutes,
             "selected_blocks": self.selected_blocks,
             "block_coaches": self.block_coaches,
             "head_coach": self.head_coach,
+            "sport": self.sport,
             "activities": {},
         }
 
@@ -166,9 +170,11 @@ class Practice:
                 "",
             ),
             warm_up_minutes=max(0, float(practice_data.get("warm_up_minutes", 0) or 0)),
+            target_minutes=max(0, float(practice_data.get("target_minutes", 90) or 90)),
             selected_blocks=practice_data.get("selected_blocks", []),
             block_coaches=practice_data.get("block_coaches", {}),
             head_coach=practice_data.get("head_coach", ""),
+            sport=str(practice_data.get("sport", ""))[:15],
         )
 
         saved_activities = practice_data.get(
@@ -206,6 +212,7 @@ class Practice:
                             "",
                         ),
                         print_details=bool(activity_data.get("print_details", False)),
+                        duration_override=activity_data.get("duration_override"),
                     )
 
                 else:

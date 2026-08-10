@@ -1,5 +1,5 @@
 """
-Coach's Training Manager
+Training Planner Ap
 ------------------------
 
 Module:
@@ -33,6 +33,7 @@ class PracticeActivity:
 
     coach_notes: str = ""
     print_details: bool = False
+    duration_override: float | None = None
 
     @classmethod
     def from_drill(cls, drill: Drill) -> "PracticeActivity":
@@ -80,4 +81,7 @@ class PracticeActivity:
         self.rest_seconds = None if value is None else value * 60
 
     def duration_minutes(self) -> float:
-        return self.duration_seconds() / 60
+        if self.duration_override is not None:
+            return max(0, float(self.duration_override))
+        execution_minutes = self.duration_seconds() / 60
+        return execution_minutes if execution_minutes > 0 else max(0, self.drill.duration_minutes)

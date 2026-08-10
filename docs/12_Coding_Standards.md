@@ -23,5 +23,5 @@ Simple code scales better than clever code.
 
 ---
 
-Coach's Training Manager  
+Training Planner Ap
 Build Better Players. One Practice at a Time.

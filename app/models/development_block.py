@@ -1,5 +1,5 @@
 """
-Coach's Training Manager
+Training Planner Ap
 ------------------------
 
 Module:
@@ -7,7 +7,7 @@ Module:
 
 Purpose:
     Represents one of the six Development Blocks used throughout
-    Coach's Training Manager.
+    Training Planner Ap.
 
 Responsibilities:
     • Store the Development Block information.

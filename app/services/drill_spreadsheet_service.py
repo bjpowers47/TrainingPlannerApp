@@ -164,28 +164,25 @@ def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
     report = ImportReport()
     workbook = load_workbook(filename, data_only=True)
     worksheet = next(
-        (sheet for sheet in workbook.worksheets if tuple(
-            cell.value for cell in next(sheet.iter_rows(min_row=1, max_row=1))
-        ) in (HEADERS, EXPORT_HEADERS)),
+        (sheet for sheet in workbook.worksheets if sheet.title in {"Drills", "Active Drills"}),
         None,
     )
     if worksheet is None:
-        report.errors.append("The spreadsheet does not use a supported drill import format.")
+        report.errors.append('The spreadsheet must contain a "Drills" or "Active Drills" sheet.')
         return report
     headers = [cell.value for cell in next(worksheet.iter_rows(min_row=1, max_row=1))]
+    if tuple(headers) not in (HEADERS, EXPORT_HEADERS):
+        report.errors.append("The Drills sheet does not use a supported column format.")
+        return report
     is_export = tuple(headers) == EXPORT_HEADERS
 
     # Resolve foreign keys from the target database. IDs in an exported file or
     # in the built-in display library are not portable between databases.
-    repository._ensure_initialized()
-    with closing(repository._database.connect()) as connection:
-        blocks = connection.execute(
-            "SELECT id, name FROM development_blocks WHERE is_active = 1"
-        ).fetchall()
-        focuses = connection.execute(
-            "SELECT id, development_block_id, name FROM technical_focuses "
-            "WHERE is_active = 1"
-        ).fetchall()
+    if hasattr(repository, "get_import_reference_data"):
+        blocks, focuses = repository.get_import_reference_data()
+    else:
+        blocks = [{"id": block.id, "name": block.name} for block in DEVELOPMENT_BLOCKS]
+        focuses = []
 
     def normalized(value: object) -> str:
         text = unescape(str(value or "")).casefold().replace("&", " and ")
@@ -232,7 +229,7 @@ def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
             report.errors.append(f"Row {row_number}: Duration Minutes must be a whole number.")
             continue
         focus_id = None
-        if focus_name:
+        if focus_name and focuses:
             focus = next((row for row in focuses if
                 row["development_block_id"] == block_id and
                 normalized(row["name"]) == normalized(focus_name)), None)
@@ -266,6 +263,7 @@ def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
         repository.save(Drill(
             id=next_id, name=clean_name, development_block_id=block_id,
             technical_focus_id=focus_id,
+            coaching_focus=str(focus_name or "").strip(),
             purpose=str(purpose or "").strip(), duration_minutes=duration_minutes,
             recommended_players=str(players or "").strip(), equipment=split(equipment),
             coaching_points=split(points), progressions=split(progressions),

@@ -21,23 +21,24 @@ class ConfigurationPage(ctk.CTkFrame):
         self.grid_rowconfigure(1, weight=1)
         form.grid_columnconfigure(1, weight=1)
 
-        self.title_entry = self._entry(form, 0, "Title (40 characters)", self.config_manager.data.get("title", ""))
-        self.head_entry = self._entry(form, 1, "Head Coach (25 characters)", self.config_manager.data.get("head_coach", ""))
+        self.sport_entry = self._entry(form, 0, "Sport (15 characters)", self.config_manager.data.get("sport", ""))
+        self.title_entry = self._entry(form, 1, "Title (40 characters)", self.config_manager.data.get("title", ""))
+        self.head_entry = self._entry(form, 2, "Head Coach (25 characters)", self.config_manager.data.get("head_coach", ""))
         ctk.CTkLabel(form, text="Assistant Coach List (one per line, 25 characters each)").grid(
-            row=2, column=0, sticky="nw", padx=10, pady=8)
+            row=3, column=0, sticky="nw", padx=10, pady=8)
         self.assistants = ctk.CTkTextbox(form, height=110)
-        self.assistants.grid(row=2, column=1, sticky="ew", padx=10, pady=8)
+        self.assistants.grid(row=3, column=1, sticky="ew", padx=10, pady=8)
         self.assistants.insert("1.0", "\n".join(self.config_manager.data.get("assistant_coaches", [])))
 
         ctk.CTkLabel(form, text="Block List", font=("Segoe UI", 18, "bold")).grid(
-            row=3, column=0, columnspan=2, sticky="w", padx=10, pady=(20, 8))
+            row=4, column=0, columnspan=2, sticky="w", padx=10, pady=(20, 8))
         self.block_frame = ctk.CTkFrame(form)
-        self.block_frame.grid(row=4, column=0, columnspan=2, sticky="ew", padx=10)
+        self.block_frame.grid(row=5, column=0, columnspan=2, sticky="ew", padx=10)
         self._refresh_blocks()
         ctk.CTkButton(form, text="+ Create Block", command=self._create_block).grid(
-            row=5, column=0, sticky="w", padx=10, pady=12)
+            row=6, column=0, sticky="w", padx=10, pady=12)
         ctk.CTkButton(form, text="Save Configuration", command=self._save).grid(
-            row=6, column=1, sticky="e", padx=10, pady=20)
+            row=7, column=1, sticky="e", padx=10, pady=20)
 
     def _entry(self, parent, row, label, value):
         ctk.CTkLabel(parent, text=label).grid(row=row, column=0, sticky="w", padx=10, pady=8)
@@ -80,7 +81,8 @@ class ConfigurationPage(ctk.CTkFrame):
 
     def _save(self):
         assistants = [line.strip()[:25] for line in self.assistants.get("1.0", "end").splitlines() if line.strip()]
-        self.config_manager.data.update(title=self.title_entry.get().strip()[:40],
+        self.config_manager.data.update(sport=self.sport_entry.get().strip()[:15],
+            title=self.title_entry.get().strip()[:40],
             head_coach=self.head_entry.get().strip()[:25], assistant_coaches=assistants)
         self.config_manager.save()
         if self.on_saved: self.on_saved()

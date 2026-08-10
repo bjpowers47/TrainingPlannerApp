@@ -1,5 +1,5 @@
 """
-SQLite database initialization for Coach's Training Manager.
+SQLite database initialization for Training Planner Ap.
 
 This module owns the physical database connection and schema creation.
 Other parts of the application should access data through repositories.
@@ -8,6 +8,7 @@ Other parts of the application should access data through repositories.
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 
@@ -30,7 +31,7 @@ class Database:
 
     def initialize(self) -> None:
         """Create all required database tables and seed base data."""
-        with self.connect() as connection:
+        with closing(self.connect()) as connection, connection:
             self._create_tables(connection)
             self._seed_development_blocks(connection)
 

@@ -24,9 +24,10 @@ class DatabaseStatus:
 class DatabaseMaintenanceService:
     """Check, back up, and optimize a SQLite database."""
 
-    def __init__(self, database_path: Path | str, backup_dir: Path | str):
+    def __init__(self, database_path: Path | str, backup_dir: Path | str, manager_name="Training Manager"):
         self.database_path = Path(database_path)
         self.backup_dir = Path(backup_dir)
+        self.manager_name = manager_name
 
     def check_health(self) -> DatabaseStatus:
         self._require_database()
@@ -79,7 +80,7 @@ class DatabaseMaintenanceService:
             raise sqlite3.DatabaseError(f"Backup integrity check reported: {integrity}")
         if missing:
             raise sqlite3.DatabaseError(
-                "The selected file is not a Training Manager backup."
+                f"The selected file is not a {self.manager_name} backup."
             )
         return DatabaseStatus(integrity, path.stat().st_size, len(tables))
 

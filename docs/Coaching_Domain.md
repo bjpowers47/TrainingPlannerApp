@@ -1,4 +1,4 @@
-# Coach's Training Manager
+# Training Planner Ap
 ## Coaching Domain
 
 This document defines the coaching concepts used throughout the application.

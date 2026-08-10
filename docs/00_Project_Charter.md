@@ -1,5 +1,5 @@
 00_Project_Charter.md
-# Coach's Training Manager
+# Training Planner Ap
 
 ## Project Charter
 
@@ -9,7 +9,7 @@ Build better players by helping coaches coach better.
 
 ### Vision
 
-Coach's Training Manager is a player development platform that helps coaches plan purposeful training sessions, organize coaching knowledge, and support the long-term growth of every player.
+Training Planner Ap is a player development platform that helps coaches plan purposeful training sessions, organize coaching knowledge, and support the long-term growth of every player.
 
 The software exists to support coaching—not replace it.
 

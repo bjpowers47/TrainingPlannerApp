@@ -79,7 +79,7 @@ class DatabaseMaintenanceServiceTests(unittest.TestCase):
                     connection.commit()
 
             service = DatabaseMaintenanceService(database_path, root / "backups")
-            with self.assertRaisesRegex(sqlite3.DatabaseError, "not a Soccer"):
+            with self.assertRaisesRegex(sqlite3.DatabaseError, "not a Training Manager"):
                 service.restore_backup(invalid_path)
 
 

@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -18,7 +19,7 @@ class DrillSpreadsheetImportTests(unittest.TestCase):
     def make_repository(self, folder):
         database = Database(Path(folder) / "test.db")
         database.initialize()
-        with database.connect() as connection:
+        with closing(database.connect()) as connection, connection:
             connection.execute("PRAGMA foreign_keys = OFF")
             connection.execute("UPDATE development_blocks SET id = 103 WHERE name = '1v1 Moves'")
             connection.execute("UPDATE development_blocks SET id = 104 WHERE name = 'Speed & Agility'")

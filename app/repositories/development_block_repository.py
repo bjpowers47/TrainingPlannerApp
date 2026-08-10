@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 
 from app.database import Database
 from app.models.development_block import DevelopmentBlock
@@ -17,7 +18,7 @@ class DevelopmentBlockRepository:
     def list_active(self) -> list[DevelopmentBlock]:
         """Return all active Development Blocks in display order."""
         self.database.initialize()
-        with self.database.connect() as connection:
+        with closing(self.database.connect()) as connection:
             rows = connection.execute(
                 """
                 SELECT
@@ -57,7 +58,7 @@ class DevelopmentBlockRepository:
 
     def create(self, name: str) -> None:
         self.database.initialize()
-        with self.database.connect() as connection:
+        with closing(self.database.connect()) as connection, connection:
             order = connection.execute("SELECT COALESCE(MAX(display_order), 0) + 1 FROM development_blocks").fetchone()[0]
             candidate = name
             suffix = 2
@@ -71,7 +72,7 @@ class DevelopmentBlockRepository:
         if not name:
             raise ValueError("Block name cannot be empty.")
 
-        with self.database.connect() as connection:
+        with closing(self.database.connect()) as connection, connection:
             duplicate = connection.execute(
                 """
                 SELECT id, is_active
@@ -118,7 +119,7 @@ class DevelopmentBlockRepository:
             connection.execute("UPDATE development_blocks SET name=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (name, block_id))
 
     def delete(self, block_id: int) -> None:
-        with self.database.connect() as connection:
+        with closing(self.database.connect()) as connection, connection:
             count = connection.execute(
                 "SELECT COUNT(*) FROM drills WHERE development_block_id=? AND is_active=1",
                 (block_id,),

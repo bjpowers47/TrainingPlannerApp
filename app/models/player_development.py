@@ -56,32 +56,32 @@ def get_block_names() -> list[str]:
 
 def get_block_by_id(
     block_id: int,
-) -> DevelopmentBlock | None:
+) -> DevelopmentBlock:
     """Return the Development Block with the matching ID."""
 
     for block in DEVELOPMENT_BLOCKS:
         if block.id == block_id:
             return block
 
-    return None
+    raise ValueError(f"Unknown development block ID: {block_id}")
 
 
 def get_block_by_name(
     block_name: str,
-) -> DevelopmentBlock | None:
+) -> DevelopmentBlock:
     for block in DEVELOPMENT_BLOCKS:
         if block.name == block_name:
             return block
 
-    return None
+    raise ValueError(f"Unknown development block name: {block_name}")
 
 
 def get_display_name(block_name: str) -> str:
     """Return the icon and name used in the interface."""
 
-    block = get_block_by_name(block_name)
-
-    if block is None:
+    try:
+        block = get_block_by_name(block_name)
+    except ValueError:
         return block_name
 
     return f"{block.icon} {block.name}"

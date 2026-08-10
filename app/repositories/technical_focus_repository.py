@@ -1,5 +1,5 @@
 """
-Coach's Training Manager
+Training Planner Ap
 ------------------------
 
 Module:
@@ -99,4 +99,3 @@ class TechnicalFocusRepository:
 
         focus.archive()
         return True
-    

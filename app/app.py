@@ -1,4 +1,7 @@
 import sqlite3
+from copy import deepcopy
+from dataclasses import asdict
+import json
 from datetime import date, datetime
 from pathlib import Path
 
@@ -40,11 +43,14 @@ from app.services.drill_spreadsheet_service import (
     export_spreadsheet,
     import_spreadsheet,
 )
-from app.config import BACKUP_DIR, RESOURCE_ROOT, ROOT
+from app.config import (
+    APP_NAME, APP_VERSION, AUTOSAVE_FILE, BACKUP_DIR, PRACTICES_DIR,
+    RESOURCE_ROOT, ROOT, training_manager_name,
+)
 from app.services.database_maintenance_service import DatabaseMaintenanceService
 from app.services.practice_pdf_service import print_practice
 
-class SoccerTrainingManager(ctk.CTk):
+class TrainingPlannerApp(ctk.CTk):
 # ==========================================================
 # Initialization
 # ==========================================================
@@ -61,11 +67,17 @@ class SoccerTrainingManager(ctk.CTk):
         self.database_maintenance = DatabaseMaintenanceService(
             ROOT / "data" / "coach_training.db",
             BACKUP_DIR,
+            training_manager_name(self.config_manager.data.get("sport", "")),
         )
 
         self.current_practice = Practice()
-        self.title("Training Manager")
-        self.geometry("1400x900")
+        self.current_practice_path = None
+        self._saved_practice_signature = self._practice_signature(self.current_practice)
+        self.title(APP_NAME)
+        self.geometry(
+            f"{self.config_manager.data.get('window_width', 1400)}x"
+            f"{self.config_manager.data.get('window_height', 900)}"
+        )
         self.logo_path = (
             RESOURCE_ROOT / "assets" / "images" / "training_manager_logo.png"
         )
@@ -75,9 +87,15 @@ class SoccerTrainingManager(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.build_ui()
+        self.bind_all("<Control-s>", lambda _event: self.save_practice())
+        self.bind_all("<Control-o>", lambda _event: self.open_practice())
+        self.bind_all("<Control-n>", lambda _event: self.new_practice())
+        self.bind_all("<Control-p>", lambda _event: self.save_practice_pdf(self.current_practice))
+        self.protocol("WM_DELETE_WINDOW", self._close_application)
+        self.after(15000, self._autosave_draft)
 
     def _set_window_icon(self):
-        """Use the Training Manager logo as the native window icon."""
+        """Use the application logo as the native window icon."""
         try:
             self.window_icon = PhotoImage(file=str(self.logo_path))
             self.iconphoto(True, self.window_icon)
@@ -87,7 +105,7 @@ class SoccerTrainingManager(ctk.CTk):
     def build_ui(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        self.banner = ctk.CTkLabel(self, text=self.config_manager.data.get("title", "Training Manager")[:40], font=("Segoe UI", 22, "bold"), height=42)
+        self.banner = ctk.CTkLabel(self, text=self.config_manager.data.get("title", APP_NAME)[:40], font=("Segoe UI", 22, "bold"), height=42)
         self.banner.grid(row=0, column=0, columnspan=2, sticky="ew")
 
         self.sidebar = ctk.CTkFrame(self, width=220)
@@ -103,7 +121,7 @@ class SoccerTrainingManager(ctk.CTk):
         )
         title = ctk.CTkLabel(
             self.sidebar,
-            text="Training Manager",
+            text=APP_NAME,
             image=self.sidebar_logo,
             compound="left",
             font=("Segoe UI", 18, "bold"),
@@ -149,7 +167,12 @@ class SoccerTrainingManager(ctk.CTk):
             fill="x",
             padx=15,
             pady=5,
-        ) 
+        )
+        ctk.CTkButton(
+            self.sidebar,
+            text="Duplicate Practice",
+            command=self.duplicate_practice,
+        ).pack(fill="x", padx=15, pady=5)
         administration_button = ctk.CTkButton(
             self.sidebar,
             text="Administration",
@@ -178,16 +201,44 @@ class SoccerTrainingManager(ctk.CTk):
         )
         title.pack(pady=20)
 
-        self.info = ctk.CTkTextbox(self.content, width=900, height=600)
-        self.info.pack(padx=20, pady=20, fill="both", expand=True)
+        actions = ctk.CTkFrame(self.content, fg_color="transparent")
+        actions.pack(fill="x", padx=30, pady=(5, 15))
+        ctk.CTkButton(actions, text="New Practice", command=self.new_practice).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(actions, text="Open Practice", command=self.open_practice).pack(side="left", padx=8)
+        if self._has_unsaved_draft():
+            ctk.CTkButton(
+                actions,
+                text="Continue Unsaved Practice",
+                command=self.restore_autosave,
+            ).pack(side="left", padx=8)
 
-        self.info.insert(
-            "end",
-            "Welcome to Training Manager\n\n"
-            "Version 0.2.1\n\n"
-            f"Head Coach: {self.config_manager.data.get('head_coach', '') or 'Not configured'}\n"
-            "Assistant Coaches: " + (", ".join(self.config_manager.data.get("assistant_coaches", [])) or "None configured")
-        )
+        ctk.CTkLabel(
+            self.content,
+            text=f"Welcome to {APP_NAME}  •  Version {APP_VERSION}\n"
+                 f"Head Coach: {self.config_manager.data.get('head_coach', '') or 'Not configured'}",
+            justify="left",
+        ).pack(anchor="w", padx=30, pady=(0, 18))
+
+        ctk.CTkLabel(self.content, text="Recent Practices", font=("Segoe UI", 18, "bold")).pack(anchor="w", padx=30)
+        recent = [Path(item) for item in self.config_manager.data.get("recent_practices", [])]
+        recent = [path for path in recent if path.is_file()]
+        if not recent:
+            ctk.CTkLabel(self.content, text="No saved practices yet.", text_color="gray").pack(anchor="w", padx=30, pady=10)
+        for path in recent[:8]:
+            row = ctk.CTkFrame(self.content, fg_color="transparent")
+            row.pack(fill="x", padx=30, pady=4)
+            ctk.CTkButton(
+                row, text=path.stem, anchor="w",
+                command=lambda selected=path: self._open_practice_path(selected),
+            ).pack(side="left", fill="x", expand=True, padx=(0, 8))
+            ctk.CTkButton(
+                row,
+                text="Delete",
+                width=80,
+                fg_color="#9b2c2c",
+                hover_color="#7f1d1d",
+                command=lambda selected=path: self._delete_recent_practice(selected),
+            ).pack(side="right")
     def show_training(self):
         self.clear_content()
 
@@ -239,11 +290,6 @@ class SoccerTrainingManager(ctk.CTk):
             expand=True,
         )
 
-        self.practice_builder_page.pack( 
-            fill="both", 
-            expand=True, 
-        )
-
         self.practice_builder_page.lift()
         self.practice_builder_page.focus_set()
 
@@ -286,12 +332,29 @@ class SoccerTrainingManager(ctk.CTk):
         self.show_practice_builder()
     def new_practice(self):
         """Start a brand-new practice."""
+        self._autosave_draft(schedule_next=False)
         self.current_practice = Practice()
+        self.current_practice_path = None
+        self._saved_practice_signature = self._practice_signature(self.current_practice)
         self.show_practice_builder()
+
+    def duplicate_practice(self):
+        """Create an editable copy without changing the original file."""
+        page = getattr(self, "practice_builder_page", None)
+        if page is not None and page.winfo_exists():
+            page.update_practice_information()
+        duplicate = deepcopy(self.current_practice)
+        duplicate.name = f"{duplicate.name} Copy".strip()
+        self.current_practice = duplicate
+        self.current_practice_path = None
+        self._saved_practice_signature = None
+        self.show_practice_builder()
+        self.status.configure(text="Practice duplicated; save it with a new name")
     def open_practice(self):
         """Open a previously saved practice."""
         filename = filedialog.askopenfilename(
             title="Open Practice",
+            initialdir=self.config_manager.data.get("last_practice_folder", str(PRACTICES_DIR)),
             filetypes=[
                 ("JSON Files", "*.json"),
                 ("All Files", "*.*"),
@@ -301,10 +364,22 @@ class SoccerTrainingManager(ctk.CTk):
         if not filename:
             return
 
-        self.current_practice = Practice.load_from_json(
-            filename
-        )
+        self._open_practice_path(filename)
 
+    def _open_practice_path(self, filename):
+        """Open a saved practice with a coach-friendly error if it is damaged."""
+        try:
+            practice = Practice.load_from_json(filename)
+        except (OSError, ValueError, TypeError) as error:
+            messagebox.showerror(
+                "Open Practice",
+                f"This practice could not be opened. It may be damaged or incompatible.\n\n{error}",
+            )
+            return
+        self.current_practice = practice
+        self.current_practice_path = Path(filename)
+        self._saved_practice_signature = self._practice_signature(practice)
+        self.config_manager.remember_practice(filename)
         self.show_practice_builder()
     def save_practice(self):
         """Save the current practice to a JSON file."""
@@ -331,26 +406,32 @@ class SoccerTrainingManager(ctk.CTk):
         safe_name = safe_name or "practice"
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        filename = filedialog.asksaveasfilename(
-            title="Save Practice",
-            initialfile=f"{safe_name}_{timestamp}.json",
-            defaultextension=".json",
-            filetypes=[
-                ("JSON Files", "*.json"),
-                ("All Files", "*.*"),
-            ],
-        )
+        filename = self.current_practice_path
+        if filename is None:
+            filename = filedialog.asksaveasfilename(
+                title="Save Practice",
+                initialdir=self.config_manager.data.get("last_practice_folder", str(PRACTICES_DIR)),
+                initialfile=f"{safe_name}_{timestamp}.json",
+                defaultextension=".json",
+                filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
+            )
 
         if not filename:
             return
 
         self.current_practice.save_to_json(filename)
+        self.current_practice_path = Path(filename)
+        self._saved_practice_signature = self._practice_signature(self.current_practice)
+        self.config_manager.remember_practice(filename)
+        AUTOSAVE_FILE.unlink(missing_ok=True)
+        self.status.configure(text=f"Saved: {Path(filename).name}")
 
     def save_practice_pdf(self, practice):
         """Open the print dialog for the current practice plan."""
         try:
             head_coach = self.config_manager.data.get("head_coach", "")
             practice.head_coach = head_coach
+            practice.sport = self.config_manager.data.get("sport", "")[:15]
             printed = print_practice(practice)
         except Exception as error:
             self.status.configure(text="Print failed")
@@ -360,6 +441,77 @@ class SoccerTrainingManager(ctk.CTk):
             )
             return
         self.status.configure(text="Practice sent to printer" if printed else "Print canceled")
+
+    def _autosave_draft(self, schedule_next=True):
+        """Persist an unobtrusive recovery copy of the practice in progress."""
+        try:
+            page = getattr(self, "practice_builder_page", None)
+            if page is not None and page.winfo_exists():
+                page.update_practice_information()
+            signature = self._practice_signature(self.current_practice)
+            if (
+                signature != self._saved_practice_signature
+                and (self.current_practice.name or self.current_practice.activity_count())
+            ):
+                self.current_practice.save_to_json(AUTOSAVE_FILE)
+                self.status.configure(text="Draft autosaved")
+        except (OSError, ValueError, TclError):
+            # Autosave must never interrupt planning; explicit save still reports errors.
+            pass
+        finally:
+            if schedule_next:
+                self.after(15000, self._autosave_draft)
+
+    def restore_autosave(self):
+        try:
+            self.current_practice = Practice.load_from_json(AUTOSAVE_FILE)
+        except (OSError, ValueError, TypeError) as error:
+            messagebox.showerror("Recover Draft", f"The draft could not be recovered.\n\n{error}")
+            return
+        self.current_practice_path = None
+        self._saved_practice_signature = None
+        self.show_practice_builder()
+        self.status.configure(text="Recovered autosaved draft")
+
+    @staticmethod
+    def _practice_signature(practice):
+        """Return a stable representation used to distinguish saved and unsaved work."""
+        data = asdict(practice)
+        data.pop("configured_blocks", None)
+        return json.dumps(data, sort_keys=True, ensure_ascii=False)
+
+    def _has_unsaved_draft(self):
+        """Return True only when autosave contains work not already saved."""
+        if not AUTOSAVE_FILE.is_file():
+            return False
+        try:
+            draft = Practice.load_from_json(AUTOSAVE_FILE)
+            draft_signature = self._practice_signature(draft)
+            for filename in self.config_manager.data.get("recent_practices", []):
+                path = Path(filename)
+                if path.is_file() and self._practice_signature(Practice.load_from_json(path)) == draft_signature:
+                    AUTOSAVE_FILE.unlink(missing_ok=True)
+                    return False
+            return bool(draft.name or draft.activity_count())
+        except (OSError, ValueError, TypeError):
+            return False
+
+    def _delete_recent_practice(self, path):
+        """Remove an item from dashboard history while preserving its file."""
+        if not messagebox.askyesno(
+            "Delete Recent Practice",
+            f'Remove "{path.stem}" from Recent Practices?\n\nThe saved practice file will not be deleted.',
+        ):
+            return
+        self.config_manager.forget_practice(path)
+        self.show_dashboard()
+
+    def _close_application(self):
+        self._autosave_draft(schedule_next=False)
+        self.config_manager.data["window_width"] = self.winfo_width()
+        self.config_manager.data["window_height"] = self.winfo_height()
+        self.config_manager.save()
+        self.destroy()
 
 # ==========================================================
 # Administration
@@ -394,7 +546,10 @@ class SoccerTrainingManager(ctk.CTk):
         ConfigurationPage(self.content, self.config_manager, self.repositories.development_blocks, self._configuration_saved).pack(fill="both", expand=True)
 
     def _configuration_saved(self):
-        self.banner.configure(text=self.config_manager.data.get("title", "Training Manager")[:40])
+        self.banner.configure(text=self.config_manager.data.get("title", APP_NAME)[:40])
+        self.database_maintenance.manager_name = training_manager_name(
+            self.config_manager.data.get("sport", "")
+        )
 
     def run_database_maintenance(self):
         """Check database health, then offer backup and optimization."""
@@ -503,7 +658,7 @@ class SoccerTrainingManager(ctk.CTk):
     def export_drill_spreadsheet(self):
         filename = filedialog.asksaveasfilename(
             title="Export Active Drills",
-            initialfile=f"soccer_drills_{date.today().isoformat()}.xlsx",
+            initialfile=f"training_planner_drills_{date.today().isoformat()}.xlsx",
             defaultextension=".xlsx",
             filetypes=[("Excel Workbook", "*.xlsx")],
         )

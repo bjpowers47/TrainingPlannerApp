@@ -1,10 +1,10 @@
-# Soccer Training Manager
+# Training Planner Ap
 
 ## Design Principles
 
 ### Our Mission
 
-Soccer Training Manager is an assistant, not an instructor.
+Training Planner Ap is an assistant, not an instructor.
 
 The application helps coaches plan, organize, track, and evaluate training sessions while respecting the coach's experience, philosophy, and judgment.
 

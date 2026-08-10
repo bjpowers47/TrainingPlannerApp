@@ -1,5 +1,5 @@
 """
-Soccer Training Manager
+Training Planner Ap
 -----------------------
 
 Module:
@@ -9,7 +9,7 @@ Coaching Library Version:
     1.0
 
 Purpose:
-    Defines the built-in Coaching Focus library for Soccer Training Manager.
+    Defines the built-in Coaching Focus library for Training Planner Ap.
 
     The application uses the class name TechnicalFocus internally, while
     coaches see the friendlier term "Coaching Focus" in the user interface.
