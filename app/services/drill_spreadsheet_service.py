@@ -32,6 +32,13 @@ HEADERS = (
 EXPORT_HEADERS = (
     "Drill ID", "Development Block", "Coaching Focus", "Drill Name",
     "Purpose", "Duration Minutes", "Recommended Players",
+    "Use Execution Details", "Sets", "Reps", "Work Minutes", "Rest Minutes",
+    "Equipment", "Coaching Points", "Progressions", "Variations", "Notes",
+)
+
+LEGACY_EXPORT_HEADERS = (
+    "Drill ID", "Development Block", "Coaching Focus", "Drill Name",
+    "Purpose", "Duration Minutes", "Recommended Players",
     "Use Execution Details", "Sets", "Reps", "Work Seconds", "Rest Seconds",
     "Equipment", "Coaching Points", "Progressions", "Variations", "Notes",
 )
@@ -87,8 +94,8 @@ def export_spreadsheet(filename: str | Path, repository, block_repository=None) 
             "Yes" if drill.use_execution_details else "No",
             drill.sets,
             drill.reps,
-            drill.work_seconds,
-            drill.rest_seconds,
+            drill.work_seconds / 60 if drill.work_seconds is not None else None,
+            drill.rest_seconds / 60 if drill.rest_seconds is not None else None,
             _pipe_join(drill.equipment),
             _pipe_join(drill.coaching_points),
             _pipe_join(drill.progressions),
@@ -159,7 +166,7 @@ def create_template(filename: str | Path) -> None:
     workbook.save(filename)
 
 
-def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
+def import_spreadsheet(filename: str | Path, repository, block_repository=None) -> ImportReport:
     """Validate a drill spreadsheet and add valid, non-duplicate drills."""
     report = ImportReport()
     workbook = load_workbook(filename, data_only=True)
@@ -171,10 +178,11 @@ def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
         report.errors.append('The spreadsheet must contain a "Drills" or "Active Drills" sheet.')
         return report
     headers = [cell.value for cell in next(worksheet.iter_rows(min_row=1, max_row=1))]
-    if tuple(headers) not in (HEADERS, EXPORT_HEADERS):
+    if tuple(headers) not in (HEADERS, EXPORT_HEADERS, LEGACY_EXPORT_HEADERS):
         report.errors.append("The Drills sheet does not use a supported column format.")
         return report
-    is_export = tuple(headers) == EXPORT_HEADERS
+    is_export = tuple(headers) in (EXPORT_HEADERS, LEGACY_EXPORT_HEADERS)
+    uses_minutes = tuple(headers) == EXPORT_HEADERS
 
     # Resolve foreign keys from the target database. IDs in an exported file or
     # in the built-in display library are not portable between databases.
@@ -215,8 +223,18 @@ def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
             sets = reps = work = rest = None
         block = block_by_name.get(normalized(block_name)) if block_name else None
         clean_name = str(name).strip() if name else ""
-        if not block or not clean_name:
-            report.errors.append(f"Row {row_number}: Development Block and Drill Name are required.")
+        if not clean_name:
+            report.errors.append(f"Row {row_number}: Drill Name is required.")
+            continue
+        if block is None and block_name and block_repository is not None:
+            created = block_repository.ensure_active(str(block_name))
+            block = {"id": created.id, "name": created.name}
+            block_by_name[normalized(created.name)] = block
+        if block is None:
+            supplied = str(block_name or "").strip() or "(blank)"
+            report.errors.append(
+                f"Row {row_number}: Development Block '{supplied}' is not active or configured."
+            )
             continue
         block_id = block["id"]
         key = (block_id, clean_name.casefold())
@@ -233,13 +251,8 @@ def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
             focus = next((row for row in focuses if
                 row["development_block_id"] == block_id and
                 normalized(row["name"]) == normalized(focus_name)), None)
-            if focus is None:
-                report.errors.append(
-                    f"Row {row_number}: Coaching Focus '{focus_name}' was not found "
-                    f"in Development Block '{block['name']}'."
-                )
-                continue
-            focus_id = focus["id"]
+            if focus is not None:
+                focus_id = focus["id"]
 
         def whole_number(value, label):
             if value in (None, ""):
@@ -251,11 +264,24 @@ def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
 
         try:
             execution_values = [whole_number(value, label) for value, label in (
-                (sets, "Sets"), (reps, "Reps"), (work, "Work Seconds"),
-                (rest, "Rest Seconds"),
+                (sets, "Sets"), (reps, "Reps"),
             )]
+            if uses_minutes:
+                timed_values = []
+                for value, label in ((work, "Work Minutes"), (rest, "Rest Minutes")):
+                    if value in (None, ""):
+                        timed_values.append(None)
+                        continue
+                    minutes = float(value)
+                    if minutes < 0:
+                        raise ValueError(label)
+                    timed_values.append(round(minutes * 60))
+            else:
+                timed_values = [whole_number(value, label) for value, label in (
+                    (work, "Work Seconds"), (rest, "Rest Seconds"),
+                )]
         except ValueError as error:
-            report.errors.append(f"Row {row_number}: {error} must be a whole number.")
+            report.errors.append(f"Row {row_number}: {error} must be a valid non-negative number.")
             continue
 
         separator = "|" if is_export else ";"
@@ -270,7 +296,7 @@ def import_spreadsheet(filename: str | Path, repository) -> ImportReport:
             variations=split(variations), notes=str(notes or "").strip(),
             use_execution_details=normalized(use_details) in {"yes", "true", "1"},
             sets=execution_values[0], reps=execution_values[1],
-            work_seconds=execution_values[2], rest_seconds=execution_values[3],
+            work_seconds=timed_values[0], rest_seconds=timed_values[1],
         ))
         known.add(key)
         next_id += 1

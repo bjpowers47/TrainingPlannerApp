@@ -67,6 +67,75 @@ class DevelopmentBlockRepository:
                 suffix += 1
             connection.execute("INSERT INTO development_blocks (name, display_order) VALUES (?, ?)", (candidate, order))
 
+    def ensure_active(self, name: str) -> DevelopmentBlock:
+        """Return a named block, reactivating or creating it for portable imports."""
+        clean_name = name.strip()
+        if not clean_name:
+            raise ValueError("Block name cannot be empty.")
+        self.database.initialize()
+        with closing(self.database.connect()) as connection, connection:
+            row = connection.execute(
+                "SELECT id FROM development_blocks WHERE name=? COLLATE NOCASE",
+                (clean_name,),
+            ).fetchone()
+            if row:
+                connection.execute(
+                    "UPDATE development_blocks SET is_active=1, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (row["id"],),
+                )
+                block_id = row["id"]
+            else:
+                order = connection.execute(
+                    "SELECT COALESCE(MAX(display_order), 0) + 1 FROM development_blocks"
+                ).fetchone()[0]
+                cursor = connection.execute(
+                    "INSERT INTO development_blocks (name, display_order) VALUES (?, ?)",
+                    (clean_name, order),
+                )
+                block_id = cursor.lastrowid
+        return self.get_by_id(block_id)
+
+    def move(self, block_id: int, direction: int) -> bool:
+        """Move an active block one position up (-1) or down (1)."""
+        blocks = self.list_active()
+        current_index = next(
+            (index for index, block in enumerate(blocks) if block.id == block_id),
+            None,
+        )
+        if current_index is None:
+            return False
+        target_index = current_index + direction
+        if target_index < 0 or target_index >= len(blocks):
+            return False
+        blocks[current_index], blocks[target_index] = (
+            blocks[target_index],
+            blocks[current_index],
+        )
+        with closing(self.database.connect()) as connection, connection:
+            for display_order, block in enumerate(blocks, start=1):
+                connection.execute(
+                    "UPDATE development_blocks SET display_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (display_order, block.id),
+                )
+        return True
+
+    def reorder(self, block_id: int, target_id: int) -> bool:
+        """Move one active block to the position occupied by another block."""
+        blocks = self.list_active()
+        source_index = next((i for i, block in enumerate(blocks) if block.id == block_id), None)
+        target_index = next((i for i, block in enumerate(blocks) if block.id == target_id), None)
+        if source_index is None or target_index is None or source_index == target_index:
+            return False
+        moved = blocks.pop(source_index)
+        blocks.insert(target_index, moved)
+        with closing(self.database.connect()) as connection, connection:
+            for display_order, block in enumerate(blocks, start=1):
+                connection.execute(
+                    "UPDATE development_blocks SET display_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (display_order, block.id),
+                )
+        return True
+
     def rename(self, block_id: int, name: str) -> None:
         name = name.strip()
         if not name:

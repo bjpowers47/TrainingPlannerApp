@@ -26,3 +26,5 @@ The preferred complete check is `python -m pytest -q`.
 - Ctrl+O — open practice
 - Ctrl+S — save practice
 - Ctrl+P — print practice
+
+See `docs/User_Manual.md` for instructions on configuring and using the application.

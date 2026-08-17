@@ -64,6 +64,27 @@ class Practice:
                 activities.remove(activity)
                 return
 
+    def reorder_activity(
+        self,
+        block: str,
+        activity: PracticeActivity,
+        target_activity: PracticeActivity,
+    ) -> bool:
+        """Move an activity to the target activity's position in its block."""
+
+        activities = self.activities.get(block, [])
+        try:
+            source_index = activities.index(activity)
+            target_index = activities.index(target_activity)
+        except ValueError:
+            return False
+
+        if source_index == target_index:
+            return False
+
+        activities.insert(target_index, activities.pop(source_index))
+        return True
+
     def get_activities(self, block: str) -> list[PracticeActivity]:
         """Return all activities for a block."""
 
@@ -103,6 +124,14 @@ class Practice:
             for block, names in self.block_coaches.items()
             if any(name in allowed for name in names)
         }
+
+    def unassigned_blocks(self) -> list[str]:
+        """Return activity blocks that do not have a selected coach."""
+        return [
+            block
+            for block in self.get_block_names()
+            if self.activities.get(block) and not self.block_coaches.get(block)
+        ]
 
     def total_duration(self) -> int:
         """Return the total planned practice duration in minutes."""

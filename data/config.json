@@ -1,15 +1,15 @@
 {
     "theme": "dark",
     "last_workbook": "",
-    "window_width": 3274,
-    "window_height": 2139,
-    "title": "Wilcate Varsity Football",
-    "sport": "Varsity Footbal",
-    "head_coach": "Brad Bolding",
-    "assistant_coaches": [
-        "Bob Powers",
-        "Wes Balon"
+    "window_width": 2550,
+    "window_height": 1610,
+    "title": "NLR JV Boys",
+    "sport": "Soccer",
+    "head_coach": "Bob Powers",
+    "assistant_coaches": [],
+    "recent_practices": [
+        "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices\\Long Practice - beginning of season_2026-08-12_05-51-57.json",
+        "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices\\Long Practice - beginning of season_2026-08-14_07-40-37.json"
     ],
-    "recent_practices": [],
     "last_practice_folder": "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices"
 }

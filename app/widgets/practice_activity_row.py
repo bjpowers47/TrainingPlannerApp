@@ -31,6 +31,9 @@ class PracticeActivityRow(ctk.CTkFrame):
         move_down_callback: Callable[[], None],
         remove_callback: Callable[[], None],
         activity_changed_callback: Callable[[], None] | None = None,
+        drag_start_callback: Callable | None = None,
+        drag_motion_callback: Callable | None = None,
+        drop_callback: Callable | None = None,
     ):
 
         super().__init__(parent)
@@ -40,6 +43,9 @@ class PracticeActivityRow(ctk.CTkFrame):
         self.move_down_callback = move_down_callback
         self.remove_callback = remove_callback
         self.activity_changed_callback = activity_changed_callback
+        self.drag_start_callback = drag_start_callback
+        self.drag_motion_callback = drag_motion_callback
+        self.drop_callback = drop_callback
         duration = activity.duration_minutes()
         duration_text = (
             str(int(duration))
@@ -82,7 +88,20 @@ class PracticeActivityRow(ctk.CTkFrame):
             padx=10,
             pady=(8, 4),
         )
-        header_frame.grid_columnconfigure(0, weight=1)
+        header_frame.grid_columnconfigure(1, weight=1)
+
+        drag_handle = ctk.CTkLabel(
+            header_frame,
+            text="|||",
+            width=30,
+            cursor="fleur",
+            text_color=("gray40", "gray70"),
+        )
+        drag_handle.grid(row=0, column=0, padx=(0, 8))
+        if self.drag_start_callback is not None:
+            drag_handle.bind("<ButtonPress-1>", self.drag_start_callback)
+            drag_handle.bind("<B1-Motion>", self.drag_motion_callback)
+            drag_handle.bind("<ButtonRelease-1>", self.drop_callback)
 
         name_label = ctk.CTkLabel(
             header_frame,
@@ -92,7 +111,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         )
         name_label.grid(
             row=0,
-            column=0,
+            column=1,
             sticky="ew",
         )
 
@@ -104,7 +123,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         )
         remove_button.grid(
             row=0,
-            column=3,
+            column=4,
             padx=(8, 0),
         )
 
@@ -116,7 +135,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         )
         move_down_button.grid(
             row=0,
-            column=2,
+            column=3,
             padx=(5, 0),
         )
 
@@ -128,7 +147,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         )
         move_up_button.grid(
             row=0,
-            column=1,
+            column=2,
             padx=(5, 0),
         )
 

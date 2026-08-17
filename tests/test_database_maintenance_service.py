@@ -68,6 +68,31 @@ class DatabaseMaintenanceServiceTests(unittest.TestCase):
             self.assertEqual(restored, "Restored Drill")
             self.assertEqual(preserved, "Current Drill")
 
+    def test_restore_removes_records_not_present_in_backup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            current = root / "current.db"
+            backup = root / "selected.db"
+            for path in (current, backup):
+                with closing(sqlite3.connect(path)) as connection:
+                    connection.execute("CREATE TABLE development_blocks (id INTEGER, name TEXT)")
+                    connection.execute("CREATE TABLE drills (id INTEGER, name TEXT)")
+                    connection.execute("INSERT INTO development_blocks VALUES (1, 'Restored Block')")
+                    connection.execute("INSERT INTO drills VALUES (1, 'Restored Drill')")
+                    connection.commit()
+            with closing(sqlite3.connect(current)) as connection:
+                connection.execute("INSERT INTO development_blocks VALUES (2, 'Current Extra Block')")
+                connection.execute("INSERT INTO drills VALUES (2, 'Current Extra Drill')")
+                connection.commit()
+
+            DatabaseMaintenanceService(current, root / "backups").restore_backup(backup)
+
+            with closing(sqlite3.connect(current)) as connection:
+                blocks = connection.execute("SELECT name FROM development_blocks").fetchall()
+                drills = connection.execute("SELECT name FROM drills").fetchall()
+            self.assertEqual(blocks, [("Restored Block",)])
+            self.assertEqual(drills, [("Restored Drill",)])
+
     def test_restore_rejects_unrelated_database(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

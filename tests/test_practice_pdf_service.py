@@ -57,10 +57,34 @@ class PracticePdfServiceTests(unittest.TestCase):
         self.assertIn("Progressions: Not specified", text)
         self.assertIn("Practice Notes: Not specified", text)
 
+    def test_practice_note_prints_beside_drill_name(self):
+        practice = Practice()
+        practice.add_activity(
+            "Ball Mastery",
+            Drill(id=1, name="Bell Taps (Sole Taps)", development_block_id=1),
+        )
+        practice.get_activities("Ball Mastery")[0].coach_notes = "Non-dominant Foot"
+
+        lines = build_practice_pdf_lines(practice)
+
+        self.assertIn(
+            ("subheading", "Bell Taps (Sole Taps) — Non-dominant Foot"),
+            lines,
+        )
+
     def test_assigned_coaches_print_beside_the_block(self):
         practice = Practice(block_coaches={"Ball Mastery": ["Alex", "Sam"]})
         text = "\n".join(value for _style, value in build_practice_pdf_lines(practice))
         self.assertIn("Ball Mastery — Coaches: Alex, Sam", text)
+
+    def test_unassigned_blocks_are_labeled_on_master_plan(self):
+        practice = Practice()
+        practice.add_activity(
+            "Ball Mastery",
+            Drill(id=1, name="Toe Taps", development_block_id=1),
+        )
+        text = "\n".join(value for _style, value in build_practice_pdf_lines(practice))
+        self.assertIn("Ball Mastery — Coach: Unassigned", text)
 
     def test_empty_practice_still_generates_a_complete_pdf(self):
         practice = Practice()
@@ -71,6 +95,36 @@ class PracticePdfServiceTests(unittest.TestCase):
         self.assertIn(b"Training Manager Practice Plan", content)
         self.assertIn(b"No activities planned.", content)
         self.assertIn(b"Total Planned Time: 0 min", content)
+
+    def test_export_preserves_user_entered_line_breaks(self):
+        practice = Practice(name="Multiline Practice", objective="First goal\nSecond goal")
+        practice.add_activity(
+            "Ball Mastery",
+            Drill(
+                id=1,
+                name="Toe Taps",
+                development_block_id=1,
+                purpose="First direction\nSecond direction",
+                coaching_points=["First point", "Second point"],
+                notes="First note\nSecond note",
+            ),
+        )
+        practice.get_activities("Ball Mastery")[0].print_details = True
+
+        lines = build_practice_pdf_lines(practice)
+        self.assertIn(("normal", "Objective: First goal\nSecond goal"), lines)
+        self.assertIn(("detail", "Directions: First direction\nSecond direction"), lines)
+        self.assertIn(("detail", "Coaching Points: First point\nSecond point"), lines)
+
+        with tempfile.TemporaryDirectory() as folder:
+            filename = Path(folder) / "multiline.pdf"
+            export_practice_pdf(filename, practice)
+            content = filename.read_bytes()
+
+        self.assertIn(b"(Objective: First goal) Tj", content)
+        self.assertIn(b"(Second goal) Tj", content)
+        self.assertIn(b"(Directions: First direction) Tj", content)
+        self.assertIn(b"(Second direction) Tj", content)
 
     def test_configured_sport_prefixes_training_manager_title(self):
         practice = Practice(sport="Basketball")

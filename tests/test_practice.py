@@ -173,6 +173,45 @@ def test_removed_coaches_are_not_retained_for_printing():
     practice.retain_configured_coaches(["Current Coach"])
     assert practice.block_coaches == {"Ball Mastery": ["Current Coach"]}
 
+
+def test_blocks_with_activities_and_no_coach_are_unassigned():
+    practice = Practice(block_coaches={"Ball Mastery": ["Coach A"]})
+    practice.add_activity("Ball Mastery", Drill(id=1, name="Assigned", development_block_id=1))
+    practice.add_activity("Finishing", Drill(id=2, name="Unassigned", development_block_id=5))
+    assert practice.unassigned_blocks() == ["Finishing"]
+
+
+def test_drag_style_reorder_moves_activity_to_target_position():
+    practice = Practice()
+    block = "Ball Mastery"
+    for drill_id, name in enumerate(("First", "Second", "Third"), start=1):
+        practice.add_activity(
+            block,
+            Drill(id=drill_id, name=name, development_block_id=1),
+        )
+
+    activities = practice.get_activities(block)
+    assert practice.reorder_activity(block, activities[2], activities[0])
+    assert [activity.name for activity in activities] == ["Third", "First", "Second"]
+
+
+def test_drag_style_reorder_rejects_activity_outside_block():
+    practice = Practice()
+    practice.add_activity(
+        "Ball Mastery",
+        Drill(id=1, name="Ball Drill", development_block_id=1),
+    )
+    practice.add_activity(
+        "Finishing",
+        Drill(id=2, name="Finishing Drill", development_block_id=5),
+    )
+
+    assert not practice.reorder_activity(
+        "Ball Mastery",
+        practice.get_activities("Ball Mastery")[0],
+        practice.get_activities("Finishing")[0],
+    )
+
 if __name__ == "__main__":
     test_practice()
     test_practice_information_is_saved_and_loaded()

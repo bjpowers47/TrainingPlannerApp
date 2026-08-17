@@ -10,6 +10,7 @@ from app.repositories.drill_repository import DrillRepository
 from app.services.drill_spreadsheet_service import (
     EXPORT_HEADERS,
     HEADERS,
+    LEGACY_EXPORT_HEADERS,
     create_template,
     import_spreadsheet,
 )
@@ -54,7 +55,7 @@ class DrillSpreadsheetImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
             repository = self.make_repository(folder)
             filename = Path(folder) / "legacy.xlsx"
-            self.save_workbook(filename, "Active Drills", EXPORT_HEADERS, (
+            self.save_workbook(filename, "Active Drills", LEGACY_EXPORT_HEADERS, (
                 999, "1v1", "Scissors", "Escape Move", "Beat a defender", 12,
                 "6", "Yes", 3, 5, 30, 15, "Balls | Cones",
                 "Attack space | Accelerate", "Add defender", "Weak foot", "",

@@ -30,6 +30,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
         practice,
         open_library_callback,
         export_pdf_callback=None,
+        print_callback=None,
         save_practice_callback=None,
         coaches=None,
     ):
@@ -39,8 +40,11 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         self.open_library_callback = open_library_callback
         self.export_pdf_callback = export_pdf_callback
+        self.print_callback = print_callback
         self.save_practice_callback = save_practice_callback
         self.coaches = coaches or []
+        self._drag_source = None
+        self._drag_target_row = None
 
         self.build_ui()
         self.refresh_summary()
@@ -82,15 +86,26 @@ class PracticeBuilderPage(ctk.CTkFrame):
         ).grid(row=0, column=1, sticky="e", padx=(0, 10))
         ctk.CTkButton(
             title_frame,
+            text="Export PDF",
+            command=self.export_pdf,
+        ).grid(row=0, column=2, sticky="e", padx=(0, 10))
+        ctk.CTkButton(
+            title_frame,
             text="Print",
-            command=self.save_as_pdf,
-        ).grid(row=0, column=2, sticky="e")
+            command=self.print_practice,
+        ).grid(row=0, column=3, sticky="e")
 
-    def save_as_pdf(self):
-        """Capture current values and open the print dialog."""
+    def export_pdf(self):
+        """Capture current values and open the PDF save dialog."""
         self.update_practice_information()
         if self.export_pdf_callback is not None:
             self.export_pdf_callback(self.practice)
+
+    def print_practice(self):
+        """Capture current values and open the system print dialog."""
+        self.update_practice_information()
+        if self.print_callback is not None:
+            self.print_callback(self.practice)
     def build_block_sections(self):
         self.block_frame = ctk.CTkScrollableFrame(self)
         self.block_frame.grid(
@@ -166,7 +181,15 @@ class PracticeBuilderPage(ctk.CTkFrame):
                             )
                         ),
                         activity_changed_callback=self.refresh_summary,
+                        drag_start_callback=lambda event, selected_block=block, selected_activity=activity: (
+                            self._start_activity_drag(event, selected_block, selected_activity)
+                        ),
+                        drag_motion_callback=self._drag_activity,
+                        drop_callback=self._drop_activity,
                     )
+
+                    activity_row._practice_block = block
+                    activity_row._practice_activity = activity
 
                     activity_row.pack(
                         fill="x",
@@ -301,7 +324,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
 
         self.coach_progress = {}
         self.coach_summary_values = {}
-        for row, coach in enumerate(self.coaches, start=1):
+        for row, coach in enumerate([*self.coaches, "Unassigned"], start=1):
             values = {}
             for column, (key, width) in enumerate((
                 ("coach", 150),
@@ -526,16 +549,21 @@ class PracticeBuilderPage(ctk.CTkFrame):
         if hasattr(self, "practice_duration_error"):
             self.practice_duration_error.configure(text=error)
 
-        for coach in self.coaches:
-            assigned = [b for b, names in self.practice.block_coaches.items() if coach in names]
+        for coach in [*self.coaches, "Unassigned"]:
+            assigned = (
+                self.practice.unassigned_blocks()
+                if coach == "Unassigned"
+                else [b for b, names in self.practice.block_coaches.items() if coach in names]
+            )
             count = sum(len(self.practice.activities.get(b, [])) for b in assigned)
             minutes = sum(a.duration_minutes() for b in assigned for a in self.practice.activities.get(b, []))
-            remaining = target_minutes - self.practice.warm_up_minutes - minutes
-            raw_percent = (minutes + self.practice.warm_up_minutes) / target_minutes * 100 if target_minutes else 0
+            warm_up = 0 if coach == "Unassigned" else self.practice.warm_up_minutes
+            remaining = target_minutes - warm_up - minutes
+            raw_percent = (minutes + warm_up) / target_minutes * 100 if target_minutes else 0
             self.coach_progress[coach].set(min(100, raw_percent) / 100)
             values = self.coach_summary_values[coach]
             values["activities"].configure(text=str(count))
-            values["warm_up"].configure(text=f"{self.practice.warm_up_minutes:g} min")
+            values["warm_up"].configure(text=f"{warm_up:g} min")
             values["planned"].configure(text=f"{minutes:g} min")
             values["remaining"].configure(
                 text=f"{remaining:g} min",
@@ -609,6 +637,49 @@ class PracticeBuilderPage(ctk.CTkFrame):
         )
 
         self.refresh_page()
+
+    def _start_activity_drag(self, _event, block, activity):
+        """Remember the selected activity when its drag handle is pressed."""
+        self._drag_source = (block, activity)
+
+    def _activity_row_at_pointer(self, event):
+        """Return the activity row currently beneath the pointer."""
+        widget = self.winfo_containing(event.x_root, event.y_root)
+        while widget is not None and widget != self.block_frame:
+            if hasattr(widget, "_practice_activity"):
+                return widget
+            widget = getattr(widget, "master", None)
+        return None
+
+    def _drag_activity(self, event):
+        """Highlight a valid destination row during an activity drag."""
+        target = self._activity_row_at_pointer(event)
+        source_block = self._drag_source[0] if self._drag_source else None
+        if target is not None and target._practice_block != source_block:
+            target = None
+        if target is self._drag_target_row:
+            return
+        if self._drag_target_row is not None:
+            self._drag_target_row.configure(fg_color=("gray86", "gray17"))
+        self._drag_target_row = target
+        if target is not None:
+            target.configure(fg_color=("gray75", "gray30"))
+
+    def _drop_activity(self, event):
+        """Move the dragged activity to the row where it was released."""
+        target = self._activity_row_at_pointer(event)
+        source = self._drag_source
+        self._drag_source = None
+        if self._drag_target_row is not None:
+            self._drag_target_row.configure(fg_color=("gray86", "gray17"))
+        self._drag_target_row = None
+        if source is None or target is None:
+            return
+        block, activity = source
+        if target._practice_block != block:
+            return
+        if self.practice.reorder_activity(block, activity, target._practice_activity):
+            self.refresh_page()
 
     # ==========================================================
     # Page Refresh

@@ -15,8 +15,17 @@ def _clean(value: object) -> str:
     return str(value or "").replace("\r", " ").replace("\n", " ").strip()
 
 
+def _clean_multiline(value: object) -> str:
+    """Normalize user-entered line endings without discarding line breaks."""
+    return str(value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
 def _join(values: list[str]) -> str:
     return ", ".join(_clean(value) for value in values if _clean(value))
+
+
+def _join_multiline(values: list[str]) -> str:
+    return "\n".join(_clean_multiline(value) for value in values if _clean_multiline(value))
 
 
 def _duration_text(minutes: float) -> str:
@@ -38,8 +47,8 @@ def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[s
         details.append(f"Team: {_clean(practice.team_name)}")
     if details:
         lines.append(("normal", " | ".join(details)))
-    if _clean(practice.objective):
-        lines.append(("normal", f"Objective: {_clean(practice.objective)}"))
+    if _clean_multiline(practice.objective):
+        lines.append(("normal", f"Objective: {_clean_multiline(practice.objective)}"))
     lines.append(("spacer", ""))
 
     lines.append(("heading", "Warm Up"))
@@ -51,7 +60,10 @@ def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[s
         lines.append(("spacer", ""))
         assigned_coaches = practice.block_coaches.get(block, [])
         coach_label = ", ".join(_clean(name) for name in assigned_coaches if _clean(name))
-        heading = f"{block} — Coach{'es' if len(assigned_coaches) != 1 else ''}: {coach_label}" if coach_label else block
+        if coach_label:
+            heading = f"{block} — Coach{'es' if len(assigned_coaches) != 1 else ''}: {coach_label}"
+        else:
+            heading = f"{block} — Coach: Unassigned"
         lines.append(("heading", heading))
         activities = practice.get_activities(block)
         if not activities:
@@ -59,7 +71,11 @@ def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[s
             continue
 
         for activity in activities:
-            lines.append(("subheading", activity.name))
+            activity_heading = _clean(activity.name)
+            practice_note = _clean(activity.coach_notes)
+            if practice_note:
+                activity_heading = f"{activity_heading} — {practice_note}"
+            lines.append(("subheading", activity_heading))
             drill = activity.drill
             facts = [f"Time: {_duration_text(activity.duration_minutes())}"]
             if activity.sets is not None:
@@ -75,19 +91,19 @@ def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[s
                 coaching_focus = _clean(legacy_focus.name) if legacy_focus else ""
             detail_values = (
                 ("Coaching Focus", coaching_focus),
-                ("Directions", drill.purpose),
+                ("Directions", _clean_multiline(drill.purpose)),
                 ("Recommended Duration", _duration_text(float(drill.duration_minutes))),
                 ("Players", drill.recommended_players),
                 ("Equipment", _join(drill.equipment)),
-                ("Coaching Points", _join(drill.coaching_points)),
-                ("Progressions", _join(drill.progressions)),
-                ("Variations", _join(drill.variations)),
-                ("Drill Notes", drill.notes),
-                ("Practice Notes", activity.coach_notes),
+                ("Coaching Points", _join_multiline(drill.coaching_points)),
+                ("Progressions", _join_multiline(drill.progressions)),
+                ("Variations", _join_multiline(drill.variations)),
+                ("Drill Notes", _clean_multiline(drill.notes)),
+                ("Practice Notes", _clean_multiline(activity.coach_notes)),
             )
             if activity.print_details:
                 for label, value in detail_values:
-                    lines.append(("detail", f"{label}: {_clean(value) or 'Not specified'}"))
+                    lines.append(("detail", f"{label}: {value or 'Not specified'}"))
 
     lines.append(("spacer", ""))
     lines.append(("total", f"Total Planned Time: {_duration_text(float(practice.total_duration()))}"))
@@ -97,6 +113,11 @@ def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[s
 def print_practice(practice, coach: str | None = None) -> bool:
     """Show the Windows Print dialog and render directly to its selected printer."""
     class PRINTDLGW(ctypes.Structure):
+        # commdlg.h uses two-byte packing for the legacy 32-bit PRINTDLG
+        # structure. Without it ctypes produces 68 bytes instead of the 66
+        # bytes expected by Windows, causing CDERR_STRUCTSIZE (error 1).
+        if ctypes.sizeof(ctypes.c_void_p) == 4:
+            _pack_ = 2
         _fields_ = [
             ("lStructSize", wintypes.DWORD), ("hwndOwner", wintypes.HWND),
             ("hDevMode", wintypes.HANDLE), ("hDevNames", wintypes.HANDLE),
@@ -263,7 +284,14 @@ def export_practice_pdf(filename: str | Path, practice, coach: str | None = None
     for style, text in build_practice_pdf_lines(practice, coach):
         font, size, leading = styles[style]
         width = 72 if style in {"detail", "muted"} else 82
-        wrapped = textwrap.wrap(text, width=width, break_long_words=False) or [""]
+        wrapped = [
+            wrapped_line
+            for entered_line in text.split("\n")
+            for wrapped_line in (
+                textwrap.wrap(entered_line, width=width, break_long_words=False)
+                or [""]
+            )
+        ]
         for line in wrapped:
             if y - leading < bottom:
                 pages.append([])

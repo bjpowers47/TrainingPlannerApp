@@ -25,6 +25,11 @@ def format_drill_details(drill):
     def value_or_default(value):
         return value if value not in (None, "") else "Not specified"
 
+    def _minutes(seconds):
+        if seconds in (None, ""):
+            return None
+        return f"{float(seconds) / 60:g}"
+
     def list_section(title, values):
         items = [str(value).strip() for value in (values or []) if str(value).strip()]
         body = "\n".join(f"- {item}" for item in items) if items else "Not specified"
@@ -45,8 +50,8 @@ def format_drill_details(drill):
             f"Enabled: {'Yes' if getattr(drill, 'use_execution_details', False) else 'No'}\n"
             f"Sets: {value_or_default(getattr(drill, 'sets', None))}\n"
             f"Reps: {value_or_default(getattr(drill, 'reps', None))}\n"
-            f"Work: {value_or_default(getattr(drill, 'work_seconds', None))} seconds\n"
-            f"Rest: {value_or_default(getattr(drill, 'rest_seconds', None))} seconds"
+            f"Work: {value_or_default(_minutes(getattr(drill, 'work_seconds', None)))} minutes\n"
+            f"Rest: {value_or_default(_minutes(getattr(drill, 'rest_seconds', None)))} minutes"
         ),
         list_section("Equipment", drill.equipment),
         list_section("Coaching Points", drill.coaching_points),

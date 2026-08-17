@@ -85,7 +85,7 @@ class DatabaseMaintenanceService:
         return DatabaseStatus(integrity, path.stat().st_size, len(tables))
 
     def restore_backup(self, backup_path: Path | str) -> Path:
-        """Preserve the current database and atomically restore a valid backup."""
+        """Preserve the current database and restore an exact backup snapshot."""
         source_path = Path(backup_path)
         self.validate_backup(source_path)
         safety_backup = self.create_backup()
@@ -97,12 +97,18 @@ class DatabaseMaintenanceService:
             with closing(sqlite3.connect(source_path)) as source:
                 with closing(sqlite3.connect(temporary_path)) as target:
                     source.backup(target)
+            self._remove_database_sidecars()
             os.replace(temporary_path, self.database_path)
         except Exception:
             if temporary_path.exists():
                 temporary_path.unlink()
             raise
         return safety_backup
+
+    def _remove_database_sidecars(self) -> None:
+        """Remove WAL state that belongs to the database being replaced."""
+        for suffix in ("-wal", "-shm", "-journal"):
+            Path(f"{self.database_path}{suffix}").unlink(missing_ok=True)
 
     def _require_database(self) -> None:
         if not self.database_path.is_file():

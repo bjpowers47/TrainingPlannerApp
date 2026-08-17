@@ -48,7 +48,7 @@ from app.config import (
     RESOURCE_ROOT, ROOT, training_manager_name,
 )
 from app.services.database_maintenance_service import DatabaseMaintenanceService
-from app.services.practice_pdf_service import print_practice
+from app.services.practice_pdf_service import export_practice_pdf, print_practice
 
 class TrainingPlannerApp(ctk.CTk):
 # ==========================================================
@@ -90,7 +90,7 @@ class TrainingPlannerApp(ctk.CTk):
         self.bind_all("<Control-s>", lambda _event: self.save_practice())
         self.bind_all("<Control-o>", lambda _event: self.open_practice())
         self.bind_all("<Control-n>", lambda _event: self.new_practice())
-        self.bind_all("<Control-p>", lambda _event: self.save_practice_pdf(self.current_practice))
+        self.bind_all("<Control-p>", lambda _event: self.print_practice(self.current_practice))
         self.protocol("WM_DELETE_WINDOW", self._close_application)
         self.after(15000, self._autosave_draft)
 
@@ -282,7 +282,8 @@ class TrainingPlannerApp(ctk.CTk):
             self.content,
             self.current_practice,
             self.show_development_library_for_block,
-            export_pdf_callback=self.save_practice_pdf,
+            export_pdf_callback=self.export_practice_pdf,
+            print_callback=self.print_practice,
             save_practice_callback=self.save_practice,
             coaches=self._configured_coaches(),
         )
@@ -427,13 +428,43 @@ class TrainingPlannerApp(ctk.CTk):
         AUTOSAVE_FILE.unlink(missing_ok=True)
         self.status.configure(text=f"Saved: {Path(filename).name}")
 
-    def save_practice_pdf(self, practice):
+    def _prepare_practice_for_output(self, practice):
+        """Apply current configuration values before printing or exporting."""
+        practice.head_coach = self.config_manager.data.get("head_coach", "")
+        practice.sport = self.config_manager.data.get("sport", "")[:15]
+        practice.retain_configured_coaches(self._configured_coaches())
+
+    def export_practice_pdf(self, practice):
+        """Save the current practice plan as a PDF file."""
+        safe_name = "".join(
+            character if character.isalnum() or character in " -_" else "_"
+            for character in (practice.name or "practice_plan")
+        ).strip() or "practice_plan"
+        filename = filedialog.asksaveasfilename(
+            title="Export Practice PDF",
+            initialfile=f"{safe_name}.pdf",
+            defaultextension=".pdf",
+            filetypes=[("PDF Files", "*.pdf"), ("All Files", "*.*")],
+        )
+        if not filename:
+            self.status.configure(text="PDF export canceled")
+            return
+        try:
+            self._prepare_practice_for_output(practice)
+            export_practice_pdf(filename, practice)
+        except Exception as error:
+            self.status.configure(text="PDF export failed")
+            messagebox.showerror(
+                "PDF Export Failed",
+                f"The practice plan could not be exported.\n\n{error}",
+            )
+            return
+        self.status.configure(text=f"PDF exported: {Path(filename).name}")
+
+    def print_practice(self, practice):
         """Open the print dialog for the current practice plan."""
         try:
-            head_coach = self.config_manager.data.get("head_coach", "")
-            practice.head_coach = head_coach
-            practice.sport = self.config_manager.data.get("sport", "")[:15]
-            practice.retain_configured_coaches(self._configured_coaches())
+            self._prepare_practice_for_output(practice)
             printed = print_practice(practice)
         except Exception as error:
             self.status.configure(text="Print failed")
@@ -625,12 +656,19 @@ class TrainingPlannerApp(ctk.CTk):
             messagebox.showerror("Restore Database", str(error))
             return
 
+        # Recreate data access objects so every page reads only the restored
+        # snapshot rather than retaining objects from the previous database.
+        self.repositories = RepositoryManager()
+        self.development_library_service = DevelopmentLibraryService(
+            self.repositories.drills
+        )
+
         messagebox.showinfo(
             "Restore Database",
             "The database was restored successfully.\n\n"
-            f"Previous database backup: {safety_backup.name}\n\n"
-            "Please restart the application before continuing.",
+            f"Previous database backup: {safety_backup.name}",
         )
+        self.show_dashboard()
 
     def create_drill_template(self):
         filename = filedialog.asksaveasfilename(
@@ -649,12 +687,41 @@ class TrainingPlannerApp(ctk.CTk):
         )
         if not filename:
             return
-        report = import_spreadsheet(filename, self.repositories.drills)
+        report = import_spreadsheet(
+            filename,
+            self.repositories.drills,
+            self.repositories.development_blocks,
+        )
         lines = [f"Imported: {report.imported}"]
         if report.duplicates:
             lines.append(f"Duplicates skipped: {len(report.duplicates)}")
         if report.errors:
             lines.append(f"Errors: {len(report.errors)}")
+            lines.append("")
+            lines.append("Error details:")
+            lines.extend(report.errors[:10])
+            if len(report.errors) > 10:
+                lines.append(f"...and {len(report.errors) - 10} more error(s).")
+        if report.errors or report.duplicates:
+            report_path = Path(filename).with_name(
+                f"{Path(filename).stem}_import_report.txt"
+            )
+            report_lines = [
+                f"Imported: {report.imported}",
+                f"Duplicates skipped: {len(report.duplicates)}",
+                f"Errors: {len(report.errors)}",
+                "",
+                "Duplicates:",
+                *(report.duplicates or ["None"]),
+                "",
+                "Errors:",
+                *(report.errors or ["None"]),
+            ]
+            try:
+                report_path.write_text("\n".join(report_lines), encoding="utf-8")
+                lines.extend(("", f"Full report saved to:\n{report_path}"))
+            except OSError as error:
+                lines.extend(("", f"The full report could not be saved: {error}"))
         messagebox.showinfo("Drill Import Report", "\n".join(lines))
 
     def export_drill_spreadsheet(self):
