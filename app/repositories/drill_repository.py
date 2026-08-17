@@ -124,10 +124,26 @@ class DrillRepository:
         return self._to_drill(row) if row else None
 
     def get_by_development_block(self, development_block_id: int) -> list[Drill]:
-        return [drill for drill in self.get_all() if drill.development_block_id == development_block_id]
+        self._ensure_initialized()
+        with closing(self._database.connect()) as connection:
+            rows = connection.execute(
+                """SELECT * FROM drills
+                WHERE is_active = 1 AND development_block_id = ?
+                ORDER BY name""",
+                (development_block_id,),
+            ).fetchall()
+        return [self._to_drill(row) for row in rows]
 
     def get_by_technical_focus(self, technical_focus_id: int) -> list[Drill]:
-        return [drill for drill in self.get_all() if drill.technical_focus_id == technical_focus_id]
+        self._ensure_initialized()
+        with closing(self._database.connect()) as connection:
+            rows = connection.execute(
+                """SELECT * FROM drills
+                WHERE is_active = 1 AND technical_focus_id = ?
+                ORDER BY name""",
+                (technical_focus_id,),
+            ).fetchall()
+        return [self._to_drill(row) for row in rows]
 
     def archive(self, drill_id: int) -> bool:
         drill = self.get_by_id(drill_id)

@@ -21,6 +21,7 @@ class Database:
     def __init__(self, database_path: Path | str = DEFAULT_DATABASE_PATH):
         self.database_path = Path(database_path)
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        self._initialized = False
 
     def connect(self) -> sqlite3.Connection:
         """Create a database connection with useful defaults."""
@@ -31,9 +32,12 @@ class Database:
 
     def initialize(self) -> None:
         """Create all required database tables and seed base data."""
+        if self._initialized:
+            return
         with closing(self.connect()) as connection, connection:
             self._create_tables(connection)
             self._seed_development_blocks(connection)
+        self._initialized = True
 
     def _create_tables(self, connection: sqlite3.Connection) -> None:
         """Create database tables if they do not already exist."""
@@ -185,6 +189,11 @@ class Database:
                     REFERENCES drills (id)
                     ON DELETE SET NULL
             );
+
+            CREATE INDEX IF NOT EXISTS idx_drills_active_block
+                ON drills (is_active, development_block_id, name);
+            CREATE INDEX IF NOT EXISTS idx_drills_active_focus
+                ON drills (is_active, technical_focus_id, name);
             """
         )
         columns = {row[1] for row in connection.execute("PRAGMA table_info(drills)")}

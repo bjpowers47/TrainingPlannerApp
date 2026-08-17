@@ -117,14 +117,19 @@ class PracticeBuilderPage(ctk.CTkFrame):
         )
 
         self.build_warm_up_section()
+        self.block_sections = {}
 
         for block in self.practice.get_block_names():
+            self._build_block_section(block)
+
+    def _build_block_section(self, block, before=None):
+            """Build one activity block so it can be refreshed independently."""
             section = ctk.CTkFrame(self.block_frame)
-            section.pack(
-                fill="x",
-                padx=10,
-                pady=8,
-            )
+            pack_options = {"fill": "x", "padx": 10, "pady": 8}
+            if before is not None:
+                pack_options["before"] = before
+            section.pack(**pack_options)
+            self.block_sections[block] = section
 
             label = ctk.CTkLabel(
                 section,
@@ -221,6 +226,25 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 padx=25,
                 pady=(8, 12),
             )
+
+    def refresh_block(self, block):
+        """Rebuild only the changed block and retain the rest of the page."""
+        section = self.block_sections.get(block)
+        if section is None:
+            return
+        block_names = self.practice.get_block_names()
+        block_index = block_names.index(block)
+        next_section = next(
+            (
+                self.block_sections[name]
+                for name in block_names[block_index + 1:]
+                if name in self.block_sections
+            ),
+            None,
+        )
+        section.destroy()
+        self._build_block_section(block, before=next_section)
+        self.refresh_summary()
 
     def build_warm_up_section(self):
         """Build the fixed warm-up section shown before development blocks."""
@@ -597,7 +621,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
         )
         
 
-        self.refresh_page()
+        self.refresh_block(block)
 
     def move_activity_up(self, block, activity):
         """Move an activity one position earlier within its block."""
@@ -617,7 +641,8 @@ class PracticeBuilderPage(ctk.CTkFrame):
             activities[current_index - 1],
         )
 
-        self.refresh_page()
+        self.refresh_block(block)
+
     def move_activity_down(self, block, activity):
         """Move an activity one position later within its block."""
 
@@ -636,7 +661,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
             activities[current_index + 1],
         )
 
-        self.refresh_page()
+        self.refresh_block(block)
 
     def _start_activity_drag(self, _event, block, activity):
         """Remember the selected activity when its drag handle is pressed."""
@@ -679,7 +704,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
         if target._practice_block != block:
             return
         if self.practice.reorder_activity(block, activity, target._practice_activity):
-            self.refresh_page()
+            self.refresh_block(block)
 
     # ==========================================================
     # Page Refresh

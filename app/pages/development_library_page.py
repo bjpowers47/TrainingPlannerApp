@@ -79,7 +79,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         self.selected_block = selected_block
         self.add_to_practice_callback = add_to_practice_callback
         self.cancel_callback = cancel_callback
-        self.blocks = blocks or DEVELOPMENT_BLOCKS
+        self.blocks = DEVELOPMENT_BLOCKS if blocks is None else blocks
 
         self.selected_block_id = None
         self.selected_drill_ids = set()

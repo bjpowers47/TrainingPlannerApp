@@ -48,7 +48,7 @@ from app.config import (
     RESOURCE_ROOT, ROOT, training_manager_name,
 )
 from app.services.database_maintenance_service import DatabaseMaintenanceService
-from app.services.practice_pdf_service import export_practice_pdf, print_practice
+from app.services.practice_output_controller import PracticeOutputController
 
 class TrainingPlannerApp(ctk.CTk):
 # ==========================================================
@@ -87,6 +87,11 @@ class TrainingPlannerApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.build_ui()
+        self.practice_output = PracticeOutputController(
+            config_data=lambda: self.config_manager.data,
+            configured_coaches=self._configured_coaches,
+            set_status=lambda text: self.status.configure(text=text),
+        )
         self.bind_all("<Control-s>", lambda _event: self.save_practice())
         self.bind_all("<Control-o>", lambda _event: self.open_practice())
         self.bind_all("<Control-n>", lambda _event: self.new_practice())
@@ -428,52 +433,13 @@ class TrainingPlannerApp(ctk.CTk):
         AUTOSAVE_FILE.unlink(missing_ok=True)
         self.status.configure(text=f"Saved: {Path(filename).name}")
 
-    def _prepare_practice_for_output(self, practice):
-        """Apply current configuration values before printing or exporting."""
-        practice.head_coach = self.config_manager.data.get("head_coach", "")
-        practice.sport = self.config_manager.data.get("sport", "")[:15]
-        practice.retain_configured_coaches(self._configured_coaches())
-
     def export_practice_pdf(self, practice):
-        """Save the current practice plan as a PDF file."""
-        safe_name = "".join(
-            character if character.isalnum() or character in " -_" else "_"
-            for character in (practice.name or "practice_plan")
-        ).strip() or "practice_plan"
-        filename = filedialog.asksaveasfilename(
-            title="Export Practice PDF",
-            initialfile=f"{safe_name}.pdf",
-            defaultextension=".pdf",
-            filetypes=[("PDF Files", "*.pdf"), ("All Files", "*.*")],
-        )
-        if not filename:
-            self.status.configure(text="PDF export canceled")
-            return
-        try:
-            self._prepare_practice_for_output(practice)
-            export_practice_pdf(filename, practice)
-        except Exception as error:
-            self.status.configure(text="PDF export failed")
-            messagebox.showerror(
-                "PDF Export Failed",
-                f"The practice plan could not be exported.\n\n{error}",
-            )
-            return
-        self.status.configure(text=f"PDF exported: {Path(filename).name}")
+        """Delegate PDF export to the output controller."""
+        self.practice_output.export_pdf(practice)
 
     def print_practice(self, practice):
-        """Open the print dialog for the current practice plan."""
-        try:
-            self._prepare_practice_for_output(practice)
-            printed = print_practice(practice)
-        except Exception as error:
-            self.status.configure(text="Print failed")
-            messagebox.showerror(
-                "Print Failed",
-                f"The practice plan could not be opened for printing.\n\n{error}",
-            )
-            return
-        self.status.configure(text="Practice sent to printer" if printed else "Print canceled")
+        """Delegate printing to the output controller."""
+        self.practice_output.print(practice)
 
     def _autosave_draft(self, schedule_next=True):
         """Persist an unobtrusive recovery copy of the practice in progress."""

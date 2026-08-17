@@ -23,7 +23,7 @@ class DrillEditorPage(ctk.CTkFrame):
         self.drill = drill
         self.on_save = on_save
         self.on_cancel = on_cancel
-        self.available_blocks = blocks or DEVELOPMENT_BLOCKS
+        self.available_blocks = DEVELOPMENT_BLOCKS if blocks is None else blocks
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)

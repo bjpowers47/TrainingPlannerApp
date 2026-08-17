@@ -25,6 +25,8 @@ class DrillManagerPage(ctk.CTkFrame):
         self.search_var = ctk.StringVar()
         self.block_filter_var = ctk.StringVar(value="All Blocks")
         self.last_archived = None
+        self._search_refresh_id = None
+        self._cached_grouped_drills = None
 
         self.build_ui()
 
@@ -61,25 +63,40 @@ class DrillManagerPage(ctk.CTkFrame):
 
         self.last_archived = drill
         self.undo_button.pack(side="right", padx=(0, 8))
-        self._refresh_list()
+        self._refresh_list(reload=True)
 
     def _undo_archive(self):
         if self.last_archived and self.drill_service.restore_drill(self.last_archived.id):
             self.last_archived = None
             self.undo_button.pack_forget()
-            self._refresh_list()
+            self._refresh_list(reload=True)
 
-    def _refresh_list(self):
+    def _refresh_list(self, reload=False):
         """Reload the drill list after a change."""
+
+        if reload:
+            self._cached_grouped_drills = None
 
         for widget in self.list_frame.winfo_children():
             widget.destroy()
         self.populate()
 
+    def _schedule_search_refresh(self, *_args):
+        """Wait briefly for typing to stop before rebuilding search results."""
+        if self._search_refresh_id is not None:
+            self.after_cancel(self._search_refresh_id)
+        self._search_refresh_id = self.after(250, self._apply_search_refresh)
+
+    def _apply_search_refresh(self):
+        self._search_refresh_id = None
+        self._refresh_list()
+
     def populate(self):
         """Load drills from the service and display them."""
 
-        grouped = self.drill_service.get_drills_by_block()
+        if self._cached_grouped_drills is None:
+            self._cached_grouped_drills = self.drill_service.get_drills_by_block()
+        grouped = self._cached_grouped_drills
         query = self.search_var.get().strip().casefold()
         selected_block = self.block_filter_var.get()
 
@@ -241,7 +258,7 @@ class DrillManagerPage(ctk.CTkFrame):
             command=lambda _value: self._refresh_list(),
             width=190,
         ).pack(side="right")
-        self.search_var.trace_add("write", lambda *_args: self._refresh_list())
+        self.search_var.trace_add("write", self._schedule_search_refresh)
 
         self.list_frame = ctk.CTkScrollableFrame(self)
         self.list_frame.pack(

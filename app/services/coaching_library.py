@@ -599,23 +599,6 @@ def get_coaching_focuses_by_block(
         if coaching_focus.development_block_id == development_block_id
         and coaching_focus.active
     ]
-def get_coaching_focus_names_by_block(
-    development_build_id: int,
-) -> list[str]:
-    """
-    Return the active Coaching Focus names for one Development Block.
-
-    The names are returned in the same order they appear in the
-    Coaching Library.
-    """
-
-    return [
-        coaching_focus.name
-        for coaching_focus in get_coaching_focuses_by_block(
-            development_build_id
-        )
-    ]
-
 def get_coaching_focus_id_by_name(
     name: str,
     development_block_id: int,
