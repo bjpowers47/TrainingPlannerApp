@@ -94,7 +94,6 @@ if __name__ == "__main__":
 import tempfile
 from pathlib import Path
 
-from app.models.practice import Practice
 
 
 def test_practice_information_is_saved_and_loaded():

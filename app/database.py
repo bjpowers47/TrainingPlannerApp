@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 DEFAULT_DATABASE_PATH = Path("data") / "coach_training.db"
+CURRENT_SCHEMA_VERSION = 1
 
 
 class Database:
@@ -36,8 +37,38 @@ class Database:
             return
         with closing(self.connect()) as connection, connection:
             self._create_tables(connection)
+            self._apply_migrations(connection)
             self._seed_development_blocks(connection)
         self._initialized = True
+
+    def _apply_migrations(self, connection: sqlite3.Connection) -> None:
+        """Record and apply ordered schema changes."""
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        applied = {
+            row["version"]
+            for row in connection.execute(
+                "SELECT version FROM schema_migrations"
+            )
+        }
+        migrations = {
+            1: (),  # Baseline for databases created before formal migrations.
+        }
+        for version in range(1, CURRENT_SCHEMA_VERSION + 1):
+            if version in applied:
+                continue
+            for statement in migrations[version]:
+                connection.execute(statement)
+            connection.execute(
+                "INSERT INTO schema_migrations (version) VALUES (?)",
+                (version,),
+            )
 
     def _create_tables(self, connection: sqlite3.Connection) -> None:
         """Create database tables if they do not already exist."""

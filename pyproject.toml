@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = ["build", "build-x86", "dist", "dist-x86", "venv", "venv-x86"]
+
+[tool.ruff.lint]
+select = ["E9", "F"]

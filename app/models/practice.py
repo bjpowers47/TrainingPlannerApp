@@ -16,6 +16,7 @@ from pathlib import Path
 from app.models.drill import Drill
 from app.models.player_development import get_block_names
 from app.models.practice_activity import PracticeActivity
+from app.services.atomic_json import write_json_atomic
 
 
 @dataclass
@@ -168,15 +169,7 @@ class Practice:
                 for activity in activities
             ]
 
-        with file_path.open(
-            "w",
-            encoding="utf-8",
-        ) as output_file:
-            json.dump(
-                practice_data,
-                output_file,
-                indent=4,
-            )
+        write_json_atomic(file_path, practice_data)
 
     @classmethod
     def load_from_json(cls, filename: str) -> "Practice":

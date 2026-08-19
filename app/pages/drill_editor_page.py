@@ -3,10 +3,15 @@ import customtkinter as ctk
 from app.models.player_development import DEVELOPMENT_BLOCKS
 from app.services.coaching_library import (
     get_coaching_focus_by_id,
-    get_coaching_focus_id_by_name,
-    get_coaching_focus_names_by_block,
 )
 from tkinter import messagebox
+from app.models.drill_form_data import DrillFormData
+from app.models.duration import (
+    execution_total_seconds,
+    format_duration,
+    parse_duration_seconds,
+    validate_total_seconds,
+)
 
 class DrillEditorPage(ctk.CTkFrame):
     """Page used to create or edit a drill."""
@@ -639,10 +644,10 @@ class DrillEditorPage(ctk.CTkFrame):
         if sets < 0:
             return
 
-        minutes, seconds = divmod(
-            sets * (work_seconds + rest_seconds), 60
+        total_seconds = execution_total_seconds(
+            sets, work_seconds, rest_seconds
         )
-        over_limit = minutes > 240 or (minutes == 240 and seconds > 0)
+        over_limit = total_seconds > 240 * 60
         if hasattr(self, "execution_error"):
             self.execution_error.configure(
                 text="Total Time cannot exceed 240:00." if over_limit else ""
@@ -650,26 +655,20 @@ class DrillEditorPage(ctk.CTkFrame):
         if hasattr(self, "save_button"):
             self.save_button.configure(state="disabled" if over_limit else "normal")
         self.duration_entry.configure(state="normal")
-        self._set_entry(self.duration_entry, f"{minutes}:{seconds:02d}")
+        self._set_entry(
+            self.duration_entry,
+            format_duration(total_seconds),
+        )
         self.duration_entry.configure(state="readonly")
 
     @staticmethod
     def _duration_seconds(minutes_value, seconds_value, label):
         """Validate duration components and return total seconds or blank."""
-        minutes_text = str(minutes_value).strip()
-        seconds_text = str(seconds_value).strip()
+        minutes_text = str(minutes_value or "").strip()
+        seconds_text = str(seconds_value or "").strip()
         if not minutes_text and not seconds_text:
             return ""
-        try:
-            minutes = int(minutes_text or 0)
-            seconds = int(seconds_text or 0)
-        except ValueError as error:
-            raise ValueError(f"{label} minutes and seconds must be whole numbers.") from error
-        if minutes < 0:
-            raise ValueError(f"{label} minutes must be zero or greater.")
-        if seconds < 0 or seconds > 59:
-            raise ValueError(f"{label} seconds must be between 0 and 59.")
-        return str(minutes * 60 + seconds)
+        return str(parse_duration_seconds(minutes_text, seconds_text, label))
 
     @staticmethod
     def _set_textbox(textbox, value):
@@ -756,13 +755,13 @@ class DrillEditorPage(ctk.CTkFrame):
             messagebox.showwarning("Invalid Time", str(error))
             return
 
-        total_seconds = int(sets or 1) * (
-            int(work_seconds or 0) + int(rest_seconds or 0)
-        )
-        if total_seconds > 240 * 60:
+        total_seconds = execution_total_seconds(sets, work_seconds, rest_seconds)
+        try:
+            validate_total_seconds(total_seconds)
+        except ValueError as error:
             messagebox.showwarning(
                 "Invalid Time",
-                "Total Time cannot exceed 240:00. Reduce Sets, Work, or Rest.",
+                f"{error} Reduce Sets, Work, or Rest.",
             )
             self.sets_entry.focus_set()
             return
@@ -776,37 +775,33 @@ class DrillEditorPage(ctk.CTkFrame):
             )
         )
         
-        drill_data = {
-            "name": name,
-            "development_block_id": development_block_id,
-            "technical_focus_id": technical_focus_id,
-            "technical_focus": (
-                selected_focus_name
-            ),
-            "purpose": self.purpose_textbox.get(
+        drill_data = DrillFormData(
+            name=name,
+            development_block_id=development_block_id,
+            technical_focus_id=technical_focus_id,
+            technical_focus=selected_focus_name,
+            purpose=self.purpose_textbox.get(
                 "1.0",
                 "end",
             ).strip(),
-            "duration_minutes": duration_minutes,
-            "recommended_players": self.players_entry.get().strip()[:30],
-            "use_execution_details": use_execution_details,
-            "sets": sets,
+            duration_minutes=duration_minutes,
+            recommended_players=self.players_entry.get().strip()[:30],
+            use_execution_details=use_execution_details,
+            sets=sets,
             # Reps is retained for older drills even though the current form uses
             # sets and timed work/rest controls.
-            "reps": self._optional_number_for_save(
+            reps=self._optional_number_for_save(
                 getattr(self.drill, "reps", "") if self.drill else ""
             ),
-            "work_seconds": work_seconds,
-            "rest_seconds": rest_seconds,
-            "equipment": self._textbox_lines(self.equipment_textbox),
-            "coaching_points": self._textbox_lines(self.coaching_points_textbox),
-            "progressions": self._textbox_lines(self.progressions_textbox),
-            "variations": self._textbox_lines(self.variations_textbox),
-            "notes": self.notes_textbox.get("1.0", "end").strip(),
-        }
-
-        if self.drill is not None:
-            drill_data["id"] = self.drill.id
+            work_seconds=work_seconds,
+            rest_seconds=rest_seconds,
+            equipment=self._textbox_lines(self.equipment_textbox),
+            coaching_points=self._textbox_lines(self.coaching_points_textbox),
+            progressions=self._textbox_lines(self.progressions_textbox),
+            variations=self._textbox_lines(self.variations_textbox),
+            notes=self.notes_textbox.get("1.0", "end").strip(),
+            id=self.drill.id if self.drill is not None else None,
+        )
 
         if not self.on_save:
             messagebox.showerror(

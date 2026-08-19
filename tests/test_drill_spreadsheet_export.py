@@ -7,7 +7,6 @@ from openpyxl import Workbook, load_workbook
 from app.models.drill import Drill
 from app.services.drill_spreadsheet_service import (
     EXPORT_HEADERS,
-    HEADERS,
     TEMPLATE_HEADERS,
     create_template,
     export_spreadsheet,

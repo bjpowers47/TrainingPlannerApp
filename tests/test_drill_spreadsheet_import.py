@@ -8,7 +8,6 @@ from openpyxl import Workbook
 from app.database import Database
 from app.repositories.drill_repository import DrillRepository
 from app.services.drill_spreadsheet_service import (
-    EXPORT_HEADERS,
     HEADERS,
     LEGACY_EXPORT_HEADERS,
     create_template,

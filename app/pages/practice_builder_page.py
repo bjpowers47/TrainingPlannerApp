@@ -12,7 +12,6 @@ Purpose:
 import customtkinter as ctk
 from tkinter import messagebox
 from app.models.player_development import (
-    DEVELOPMENT_BLOCKS,
     get_display_name
 )
 from app.widgets.practice_activity_row import PracticeActivityRow

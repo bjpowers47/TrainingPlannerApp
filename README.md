@@ -20,6 +20,9 @@ Run `python -m unittest discover -s tests -p "test_*.py" -v`.
 
 The preferred complete check is `python -m pytest -q`.
 
+Run `python -m ruff check app tests main.py` for static quality checks. Before
+packaging a release, complete `docs/RELEASE_CHECKLIST.md`.
+
 ## Keyboard shortcuts
 
 - Ctrl+N — new practice

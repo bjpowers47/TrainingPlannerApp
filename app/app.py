@@ -20,10 +20,6 @@ from app.pages.administration_page import AdministrationPage
 from app.pages.drill_manager_page import DrillManagerPage
 from app.pages.configuration_page import ConfigurationPage
 from app.models.practice import Practice
-from app.models.player_development import (
-    get_block_by_id,
-    get_block_by_name,
-)
 
 
 def _to_int_or_none(value):
@@ -742,6 +738,8 @@ class TrainingPlannerApp(ctk.CTk):
         page.pack(fill="both", expand=True)
     def handle_drill_editor_save(self, data):
         """Create a new drill or update an existing drill."""
+        if hasattr(data, "to_dict"):
+            data = data.to_dict()
         existing_drills = self.repositories.drills.get_all()
 
         block = self.repositories.development_blocks.get_by_id(

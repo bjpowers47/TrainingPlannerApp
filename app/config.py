@@ -3,6 +3,8 @@ import json
 import os
 import sys
 
+from app.services.atomic_json import write_json_atomic
+
 APP_NAME = "Wildcat Training Planner"
 APP_VERSION = "0.3.0"
 
@@ -64,8 +66,7 @@ class ConfigManager:
                 self.data = DEFAULT_CONFIG.copy()
 
     def save(self):
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=4)
+        write_json_atomic(CONFIG_FILE, self.data)
 
     def remember_practice(self, filename):
         """Keep a short most-recently-used list for the dashboard."""

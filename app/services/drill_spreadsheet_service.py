@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from contextlib import closing
 from dataclasses import dataclass, field
 from html import unescape
 from pathlib import Path
@@ -15,11 +14,9 @@ from openpyxl.utils import get_column_letter
 from app.models.drill import Drill
 from app.models.player_development import (
     DEVELOPMENT_BLOCKS,
-    get_block_by_name,
 )
 from app.services.coaching_library import (
     get_coaching_focus_by_id,
-    get_coaching_focus_id_by_name,
 )
 
 

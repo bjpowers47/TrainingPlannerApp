@@ -14,6 +14,7 @@ from collections.abc import Callable
 import customtkinter as ctk
 
 from app.models.practice_activity import PracticeActivity
+from app.models.duration import format_duration
 
 
 class PracticeActivityRow(ctk.CTkFrame):
@@ -46,7 +47,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         self.drag_start_callback = drag_start_callback
         self.drag_motion_callback = drag_motion_callback
         self.drop_callback = drop_callback
-        duration_text = self._format_duration(activity.duration_seconds())
+        duration_text = format_duration(activity.duration_seconds())
         self.duration_var = self._make_value_var(duration_text)
         self.sets_var = self._make_value_var(activity.sets)
         self.coach_notes_var = self._make_value_var(activity.coach_notes)
@@ -464,7 +465,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         """Recalculate and display the activity duration."""
 
         self.duration_var.set(
-            self._format_duration(self.activity.duration_seconds())
+            format_duration(self.activity.duration_seconds())
         )
 
     @staticmethod
@@ -482,9 +483,3 @@ class PracticeActivityRow(ctk.CTkFrame):
             return ctk.StringVar(value="0"), ctk.StringVar(value="0")
         minutes, seconds = divmod(int(total_seconds), 60)
         return ctk.StringVar(value=str(minutes)), ctk.StringVar(value=f"{seconds:02d}")
-
-    @staticmethod
-    def _format_duration(total_seconds: float) -> str:
-        """Format an exact duration for the read-only Time field."""
-        minutes, seconds = divmod(int(total_seconds), 60)
-        return f"{minutes}:{seconds:02d}"
