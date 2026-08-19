@@ -1,14 +1,13 @@
 {
     "theme": "dark",
     "last_workbook": "",
-    "window_width": 2801,
-    "window_height": 1737,
+    "window_width": 2621,
+    "window_height": 1696,
     "title": "NLR JV Boys",
     "sport": "Soccer",
     "head_coach": "Bob Powers",
     "assistant_coaches": [],
     "recent_practices": [
-        "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices\\Long Practice - beginning of season_2026-08-12_05-51-57.json",
         "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices\\Long Practice - beginning of season_2026-08-14_07-40-37.json"
     ],
     "last_practice_folder": "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices"

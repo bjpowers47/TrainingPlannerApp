@@ -60,6 +60,27 @@ def test_name_property():
     assert activity.name == "Ball Taps"
 
 
+def test_duration_uses_exact_work_and_rest_seconds():
+    drill = Drill(
+        id=1,
+        name="Intervals",
+        development_block_id=1,
+        technical_focus_id=None,
+        purpose="Fitness",
+        duration_minutes=10,
+        recommended_players="1+",
+    )
+    activity = PracticeActivity(
+        drill,
+        sets=3,
+        work_seconds=75,
+        rest_seconds=20,
+    )
+
+    assert activity.duration_seconds() == 285
+    assert activity.duration_minutes() == 4.75
+
+
 if __name__ == "__main__":
     test_default_duration()
     test_override_duration()

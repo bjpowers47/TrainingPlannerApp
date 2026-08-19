@@ -177,38 +177,50 @@ class DrillEditorPage(ctk.CTkFrame):
             pady=(0, 18),
         )
 
-        self._add_label("Time (min)", row=7, column=0)
+        self._add_label("Time (min:sec)", row=7, column=0)
 
         self.duration_entry = ctk.CTkEntry(
             self.form,
-            placeholder_text="10",
             height=38,
+            width=84,
+            justify="center",
+            state="readonly",
         )
         self.duration_entry.grid(
             row=8,
             column=0,
-            sticky="ew",
+            sticky="w",
             padx=15,
             pady=(0, 18),
         )
 
         self._add_label("Players", row=7, column=1)
 
+        self.players_var = ctk.StringVar()
+        self.players_var.trace_add("write", self._limit_players_text)
         self.players_entry = ctk.CTkEntry(
             self.form,
             placeholder_text="8",
             height=38,
+            width=260,
+            textvariable=self.players_var,
         )
         self.players_entry.grid(
             row=8,
             column=1,
-            sticky="ew",
+            sticky="w",
             padx=15,
             pady=(0, 18),
         )
 
         self._build_execution_details()
         self._build_library_details()
+
+    def _limit_players_text(self, *_args):
+        """Keep the Players field within its 30-character limit."""
+        value = self.players_var.get()
+        if len(value) > 30:
+            self.players_var.set(value[:30])
 
     def _build_execution_details(self):
         """Build the optional execution detail fields."""
@@ -239,19 +251,43 @@ class DrillEditorPage(ctk.CTkFrame):
             label="Sets",
             placeholder="3",
             column=0,
+            entry_width=64,
         )
-        self.work_entry = self._add_execution_field(
-            label="Work (min)",
-            placeholder="1.5",
+        (
+            self.work_minutes_entry,
+            self.work_seconds_entry,
+        ) = self._add_duration_fields(
+            label="Work",
             column=1,
         )
-        self.rest_entry = self._add_execution_field(
-            label="Rest (min)",
-            placeholder="0.5",
+        (
+            self.rest_minutes_entry,
+            self.rest_seconds_entry,
+        ) = self._add_duration_fields(
+            label="Rest",
             column=2,
+            left_padding=24,
         )
 
-    def _add_execution_field(self, label, placeholder, column):
+        self._set_duration_entries(
+            self.work_minutes_entry, self.work_seconds_entry, 0
+        )
+        self._set_duration_entries(
+            self.rest_minutes_entry, self.rest_seconds_entry, 0
+        )
+        for entry in (
+            self.sets_entry,
+            self.work_minutes_entry,
+            self.work_seconds_entry,
+            self.rest_minutes_entry,
+            self.rest_seconds_entry,
+        ):
+            entry.bind("<KeyRelease>", self._refresh_duration)
+        self._refresh_duration()
+
+    def _add_execution_field(
+        self, label, placeholder, column, entry_width=None
+    ):
         field_frame = ctk.CTkFrame(
             self.execution_frame,
             fg_color="transparent",
@@ -283,14 +319,65 @@ class DrillEditorPage(ctk.CTkFrame):
             field_frame,
             placeholder_text=placeholder,
             height=36,
+            width=entry_width or 120,
+            justify="center",
         )
         entry.grid(
             row=1,
             column=0,
-            sticky="ew",
+            sticky="w" if entry_width else "ew",
         )
 
         return entry
+
+    def _add_duration_fields(
+        self, label, column, left_padding=8
+    ):
+        """Build a labeled pair of minute and second inputs."""
+        field_frame = ctk.CTkFrame(
+            self.execution_frame,
+            fg_color="transparent",
+        )
+        field_frame.grid(
+            row=0,
+            column=column,
+            sticky="w",
+            padx=(left_padding, 8),
+            pady=10,
+        )
+
+        ctk.CTkLabel(
+            field_frame,
+            text=label,
+            font=("Segoe UI", 13, "bold"),
+            anchor="w",
+        ).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 6))
+
+        minutes_entry = ctk.CTkEntry(
+            field_frame,
+            placeholder_text="0",
+            height=36,
+            width=64,
+            justify="center",
+        )
+        minutes_entry.grid(row=1, column=0, sticky="w")
+        ctk.CTkLabel(field_frame, text="min").grid(
+            row=1, column=1, padx=(5, 12)
+        )
+
+        seconds_entry = ctk.CTkEntry(
+            field_frame,
+            placeholder_text="00",
+            height=36,
+            width=50,
+            justify="center",
+        )
+        seconds_entry.grid(row=1, column=2, sticky="w")
+        ctk.CTkLabel(field_frame, text="sec").grid(
+            row=1, column=3, padx=(5, 0)
+        )
+
+        return minutes_entry, seconds_entry
 
     def _build_library_details(self):
         """Build the descriptive fields stored with library drills."""
@@ -404,10 +491,6 @@ class DrillEditorPage(ctk.CTkFrame):
         )
 
         self._set_entry(
-            self.duration_entry,
-            self.drill.duration_minutes,
-        )
-        self._set_entry(
             self.players_entry,
             self.drill.recommended_players,
         )
@@ -418,8 +501,13 @@ class DrillEditorPage(ctk.CTkFrame):
         rest_seconds = getattr(self.drill, "rest_seconds", None)
 
         self._set_entry(self.sets_entry, sets)
-        self._set_entry(self.work_entry, work_seconds / 60 if work_seconds is not None else None)
-        self._set_entry(self.rest_entry, rest_seconds / 60 if rest_seconds is not None else None)
+        self._set_duration_entries(
+            self.work_minutes_entry, self.work_seconds_entry, work_seconds
+        )
+        self._set_duration_entries(
+            self.rest_minutes_entry, self.rest_seconds_entry, rest_seconds
+        )
+        self._refresh_duration()
 
         self._set_textbox(
             self.equipment_textbox,
@@ -448,6 +536,61 @@ class DrillEditorPage(ctk.CTkFrame):
 
         if value not in (None, ""):
             entry.insert(0, str(value))
+
+    @classmethod
+    def _set_duration_entries(cls, minutes_entry, seconds_entry, total_seconds):
+        """Populate duration component entries from stored seconds."""
+        if total_seconds is None:
+            cls._set_entry(minutes_entry, 0)
+            cls._set_entry(seconds_entry, 0)
+            return
+        minutes, seconds = divmod(int(total_seconds), 60)
+        cls._set_entry(minutes_entry, minutes)
+        cls._set_entry(seconds_entry, seconds)
+
+    def _refresh_duration(self, _event=None):
+        """Update the read-only Time field from the execution values."""
+        try:
+            sets = int(self.sets_entry.get().strip() or 1)
+            work_seconds = int(self._duration_seconds(
+                self.work_minutes_entry.get(),
+                self.work_seconds_entry.get(),
+                "Work",
+            ) or 0)
+            rest_seconds = int(self._duration_seconds(
+                self.rest_minutes_entry.get(),
+                self.rest_seconds_entry.get(),
+                "Rest",
+            ) or 0)
+        except ValueError:
+            return
+        if sets < 0:
+            return
+
+        minutes, seconds = divmod(
+            sets * (work_seconds + rest_seconds), 60
+        )
+        self.duration_entry.configure(state="normal")
+        self._set_entry(self.duration_entry, f"{minutes}:{seconds:02d}")
+        self.duration_entry.configure(state="readonly")
+
+    @staticmethod
+    def _duration_seconds(minutes_value, seconds_value, label):
+        """Validate duration components and return total seconds or blank."""
+        minutes_text = str(minutes_value).strip()
+        seconds_text = str(seconds_value).strip()
+        if not minutes_text and not seconds_text:
+            return ""
+        try:
+            minutes = int(minutes_text or 0)
+            seconds = int(seconds_text or 0)
+        except ValueError as error:
+            raise ValueError(f"{label} minutes and seconds must be whole numbers.") from error
+        if minutes < 0:
+            raise ValueError(f"{label} minutes must be zero or greater.")
+        if seconds < 0 or seconds > 59:
+            raise ValueError(f"{label} seconds must be between 0 and 59.")
+        return str(minutes * 60 + seconds)
 
     @staticmethod
     def _set_textbox(textbox, value):
@@ -515,31 +658,35 @@ class DrillEditorPage(ctk.CTkFrame):
             return
 
         try:
-            duration_minutes = self._whole_number(
-                self.duration_entry.get(), "Time"
-            )
             sets = self._whole_number(self.sets_entry.get(), "Sets")
         except ValueError as error:
             messagebox.showwarning("Invalid Drill Details", str(error))
             return
-        work_minutes = self.work_entry.get().strip()
-        rest_minutes = self.rest_entry.get().strip()
-        for label, value in (("Work", work_minutes), ("Rest", rest_minutes)):
-            if value:
-                try:
-                    minutes = float(value)
-                except ValueError:
-                    messagebox.showwarning("Invalid Time", f"{label} must be a number of minutes.")
-                    return
-                if minutes < 0 or minutes * 2 != int(minutes * 2):
-                    messagebox.showwarning("Invalid Time", f"{label} must use whole or half minutes.")
-                    return
+        try:
+            work_seconds = self._duration_seconds(
+                self.work_minutes_entry.get(),
+                self.work_seconds_entry.get(),
+                "Work",
+            )
+            rest_seconds = self._duration_seconds(
+                self.rest_minutes_entry.get(),
+                self.rest_seconds_entry.get(),
+                "Rest",
+            )
+        except ValueError as error:
+            messagebox.showwarning("Invalid Time", str(error))
+            return
+
+        total_seconds = int(sets or 1) * (
+            int(work_seconds or 0) + int(rest_seconds or 0)
+        )
+        duration_minutes = str(total_seconds // 60)
 
         use_execution_details = any(
             (
                 sets,
-                work_minutes,
-                rest_minutes,
+                work_seconds,
+                rest_seconds,
             )
         )
         
@@ -555,7 +702,7 @@ class DrillEditorPage(ctk.CTkFrame):
                 "end",
             ).strip(),
             "duration_minutes": duration_minutes,
-            "recommended_players": self.players_entry.get().strip(),
+            "recommended_players": self.players_entry.get().strip()[:30],
             "use_execution_details": use_execution_details,
             "sets": sets,
             # Reps is retained for older drills even though the current form uses
@@ -563,8 +710,8 @@ class DrillEditorPage(ctk.CTkFrame):
             "reps": self._optional_number_for_save(
                 getattr(self.drill, "reps", "") if self.drill else ""
             ),
-            "work_seconds": str(float(work_minutes) * 60) if work_minutes else "",
-            "rest_seconds": str(float(rest_minutes) * 60) if rest_minutes else "",
+            "work_seconds": work_seconds,
+            "rest_seconds": rest_seconds,
             "equipment": self._textbox_lines(self.equipment_textbox),
             "coaching_points": self._textbox_lines(self.coaching_points_textbox),
             "progressions": self._textbox_lines(self.progressions_textbox),

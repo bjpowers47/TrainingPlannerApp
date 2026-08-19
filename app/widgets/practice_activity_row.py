@@ -46,17 +46,16 @@ class PracticeActivityRow(ctk.CTkFrame):
         self.drag_start_callback = drag_start_callback
         self.drag_motion_callback = drag_motion_callback
         self.drop_callback = drop_callback
-        duration = activity.duration_minutes()
-        duration_text = (
-            str(int(duration))
-            if duration.is_integer()
-            else f"{duration:.1f}"
-        )
+        duration_text = self._format_duration(activity.duration_seconds())
         self.duration_var = self._make_value_var(duration_text)
         self.sets_var = self._make_value_var(activity.sets)
         self.coach_notes_var = self._make_value_var(activity.coach_notes)
-        self.work_var = self._make_value_var(activity.work_minutes)
-        self.rest_var = self._make_value_var(activity.rest_minutes)
+        self.work_minutes_var, self.work_seconds_var = self._duration_vars(
+            activity.work_seconds
+        )
+        self.rest_minutes_var, self.rest_seconds_var = self._duration_vars(
+            activity.rest_seconds
+        )
         self.print_details_var = ctk.BooleanVar(value=activity.print_details)
         
         self.build_ui()
@@ -171,7 +170,8 @@ class PracticeActivityRow(ctk.CTkFrame):
             column=0,
             label="Time",
             variable=self.duration_var,
-            suffix="min",
+            suffix="min:sec",
+            width=66,
         )
         self._build_value_field(
             execution_frame,
@@ -186,19 +186,19 @@ class PracticeActivityRow(ctk.CTkFrame):
             variable=self.coach_notes_var,
             width=180,
         )
-        self._build_value_field(
+        self._build_duration_field(
             execution_frame,
             column=3,
             label="Work",
-            variable=self.work_var,
-            suffix="min",
+            minutes_variable=self.work_minutes_var,
+            seconds_variable=self.work_seconds_var,
         )
-        self._build_value_field(
+        self._build_duration_field(
             execution_frame,
             column=4,
             label="Rest",
-            variable=self.rest_var,
-            suffix="min",
+            minutes_variable=self.rest_minutes_var,
+            seconds_variable=self.rest_seconds_var,
         )
         ctk.CTkCheckBox(
             execution_frame,
@@ -265,6 +265,37 @@ class PracticeActivityRow(ctk.CTkFrame):
                 padx=(4, 0),
             )
 
+    def _build_duration_field(
+        self,
+        parent,
+        column: int,
+        label: str,
+        minutes_variable: ctk.StringVar,
+        seconds_variable: ctk.StringVar,
+    ) -> None:
+        """Build separate minute and second entries for a duration."""
+
+        field_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        field_frame.grid(row=0, column=column, sticky="w", padx=(0, 14))
+
+        ctk.CTkLabel(
+            field_frame, text=label, font=("Segoe UI", 13)
+        ).pack(side="left", padx=(0, 5))
+
+        for variable, suffix, width in (
+            (minutes_variable, "min", 54),
+            (seconds_variable, "sec", 42),
+        ):
+            ctk.CTkEntry(
+                field_frame,
+                width=width,
+                textvariable=variable,
+                justify="center",
+            ).pack(side="left")
+            ctk.CTkLabel(
+                field_frame, text=suffix, font=("Segoe UI", 12)
+            ).pack(side="left", padx=(4, 7))
+
     # ==========================================================
     # Business Logic
     # ==========================================================
@@ -275,8 +306,6 @@ class PracticeActivityRow(ctk.CTkFrame):
         bindings = (
             (self.sets_var, "sets"),
             (self.coach_notes_var, "coach_notes"),
-            (self.work_var, "work_minutes"),
-            (self.rest_var, "rest_minutes"),
         )
 
         for variable, attribute_name in bindings:
@@ -286,6 +315,66 @@ class PracticeActivityRow(ctk.CTkFrame):
                     self.save_value(var, attr)
                 ),
             )
+
+        for variable, minutes_var, seconds_var, attribute_name in (
+            (
+                self.work_minutes_var,
+                self.work_minutes_var,
+                self.work_seconds_var,
+                "work_seconds",
+            ),
+            (
+                self.work_seconds_var,
+                self.work_minutes_var,
+                self.work_seconds_var,
+                "work_seconds",
+            ),
+            (
+                self.rest_minutes_var,
+                self.rest_minutes_var,
+                self.rest_seconds_var,
+                "rest_seconds",
+            ),
+            (
+                self.rest_seconds_var,
+                self.rest_minutes_var,
+                self.rest_seconds_var,
+                "rest_seconds",
+            ),
+        ):
+            variable.trace_add(
+                "write",
+                lambda *_args, mins=minutes_var, secs=seconds_var, attr=attribute_name: (
+                    self.save_duration(mins, secs, attr)
+                ),
+            )
+
+    def save_duration(
+        self,
+        minutes_variable: ctk.StringVar,
+        seconds_variable: ctk.StringVar,
+        attribute_name: str,
+    ) -> None:
+        """Save valid minute/second components as total seconds."""
+
+        minutes_text = minutes_variable.get().strip()
+        seconds_text = seconds_variable.get().strip()
+        if not minutes_text and not seconds_text:
+            value = None
+        else:
+            try:
+                minutes = int(minutes_text or 0)
+                seconds = int(seconds_text or 0)
+            except ValueError:
+                return
+            if minutes < 0 or seconds < 0 or seconds > 59:
+                return
+            value = minutes * 60 + seconds
+
+        setattr(self.activity, attribute_name, value)
+        self.refresh_duration()
+        if self.activity_changed_callback is not None:
+            self.activity_changed_callback()
     def save_value(
         self,
         variable: ctk.StringVar,
@@ -309,8 +398,6 @@ class PracticeActivityRow(ctk.CTkFrame):
 
                 if value < 0:
                     return
-                if attribute_name in ("work_minutes", "rest_minutes") and value * 2 != int(value * 2):
-                    return
 
         setattr(
             self.activity,
@@ -320,8 +407,6 @@ class PracticeActivityRow(ctk.CTkFrame):
 
         if attribute_name in (
             "sets",
-            "work_minutes",
-            "rest_minutes",
         ):
             self.refresh_duration()
 
@@ -330,15 +415,9 @@ class PracticeActivityRow(ctk.CTkFrame):
     def refresh_duration(self) -> None:
         """Recalculate and display the activity duration."""
 
-        duration = self.activity.duration_minutes()
-
-        duration_text = (
-            str(int(duration))
-            if duration.is_integer()
-            else f"{duration:.1f}"
+        self.duration_var.set(
+            self._format_duration(self.activity.duration_seconds())
         )
-
-        self.duration_var.set(duration_text)
 
     @staticmethod
     def _make_value_var(value: int | None) -> ctk.StringVar:
@@ -346,3 +425,18 @@ class PracticeActivityRow(ctk.CTkFrame):
 
         display_value = "" if value is None else str(value)
         return ctk.StringVar(value=display_value)
+
+    @staticmethod
+    def _duration_vars(total_seconds: float | None) -> tuple[ctk.StringVar, ctk.StringVar]:
+        """Create minute and second variables from a stored duration."""
+
+        if total_seconds is None:
+            return ctk.StringVar(value="0"), ctk.StringVar(value="0")
+        minutes, seconds = divmod(int(total_seconds), 60)
+        return ctk.StringVar(value=str(minutes)), ctk.StringVar(value=str(seconds))
+
+    @staticmethod
+    def _format_duration(total_seconds: float) -> str:
+        """Format an exact duration for the read-only Time field."""
+        minutes, seconds = divmod(int(total_seconds), 60)
+        return f"{minutes}:{seconds:02d}"
