@@ -1,6 +1,6 @@
-# Training Planner Ap
+# Wildcat Training Planner
 
-Training Planner Ap helps coaches build purposeful practices, maintain a drill
+Wildcat Training Planner helps coaches build purposeful practices, maintain a drill
 library, assign coaches, and print complete practice plans.
 
 ## Run from source

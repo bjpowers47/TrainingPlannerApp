@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='TrainingPlannerAp',
+    name='WildcatTrainingPlanner',
     icon='assets/images/training_manager_logo.ico',
     debug=False,
     bootloader_ignore_signals=False,

@@ -1,10 +1,10 @@
-# Training Planner Ap
+# Wildcat Training Planner
 
 ## Design Principles
 
 ### Our Mission
 
-Training Planner Ap is an assistant, not an instructor.
+Wildcat Training Planner is an assistant, not an instructor.
 
 The application helps coaches plan, organize, track, and evaluate training sessions while respecting the coach's experience, philosophy, and judgment.
 

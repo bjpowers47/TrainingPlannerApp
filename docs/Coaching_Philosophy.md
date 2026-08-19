@@ -1,8 +1,8 @@
-# Training Planner Ap
+# Wildcat Training Planner
 
 ## Coaching Philosophy
 
-Training Planner Ap is built around one belief:
+Wildcat Training Planner is built around one belief:
 
 > Develop players first.
 

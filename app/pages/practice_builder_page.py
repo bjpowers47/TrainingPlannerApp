@@ -1,5 +1,5 @@
 """
-Training Planner Ap
+Wildcat Training Planner
 ------------------------
 
 Module:
@@ -614,6 +614,12 @@ class PracticeBuilderPage(ctk.CTkFrame):
     
     def remove_activity(self, block, activity):
         """Remove an activity and refresh the Practice Builder."""
+
+        if not messagebox.askyesno(
+            "Remove Activity",
+            f'Remove "{activity.name}" from this practice?\n\nThe drill will remain in the Development Library.',
+        ):
+            return
 
         self.practice.remove_activity(
             block,

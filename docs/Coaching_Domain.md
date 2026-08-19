@@ -1,4 +1,4 @@
-# Training Planner Ap
+# Wildcat Training Planner
 ## Coaching Domain
 
 This document defines the coaching concepts used throughout the application.

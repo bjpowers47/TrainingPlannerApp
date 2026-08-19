@@ -1,5 +1,5 @@
 """
-Domain models for Training Planner Ap.
+Domain models for Wildcat Training Planner.
 
 These classes represent real coaching concepts, not database tables.
 """

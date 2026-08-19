@@ -23,5 +23,5 @@ Simple code scales better than clever code.
 
 ---
 
-Training Planner Ap
+Wildcat Training Planner
 Build Better Players. One Practice at a Time.

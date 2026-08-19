@@ -2,7 +2,7 @@
 
 ## 0.3.0
 
-- Renamed the product to Training Planner Ap.
+- Renamed the product to Wildcat Training Planner.
 - Added practice autosave, recovery, recent practices, and safer file opening.
 - Replaced the redundant startup recovery popup with a clear Continue Unsaved Practice dashboard action.
 - Added recent-practice list management and accurate saved-versus-unsaved draft detection.

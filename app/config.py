@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-APP_NAME = "Training Planner Ap"
+APP_NAME = "Wildcat Training Planner"
 APP_VERSION = "0.3.0"
 
 RESOURCE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).parent.parent))

@@ -1,5 +1,5 @@
 """
-Training Planner Ap
+Wildcat Training Planner
 ------------------------
 
 A coach-centered player development platform.

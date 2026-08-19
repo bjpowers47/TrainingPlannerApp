@@ -34,6 +34,7 @@ class DrillEditorPage(ctk.CTkFrame):
 
         if self.drill is not None:
             self._load_drill()
+        self.after_idle(self._remember_initial_state)
 
     def _build_header(self):
         header = ctk.CTkFrame(
@@ -253,6 +254,7 @@ class DrillEditorPage(ctk.CTkFrame):
             column=0,
             entry_width=64,
         )
+        self._set_entry(self.sets_entry, 1)
         (
             self.work_minutes_entry,
             self.work_seconds_entry,
@@ -275,6 +277,15 @@ class DrillEditorPage(ctk.CTkFrame):
         self._set_duration_entries(
             self.rest_minutes_entry, self.rest_seconds_entry, 0
         )
+
+        digits_3 = (self.register(self._valid_digits), "%P", "3", "")
+        seconds_2 = (self.register(self._valid_digits), "%P", "2", "59")
+        self.sets_entry.configure(validate="key", validatecommand=digits_3)
+        for entry in (self.work_minutes_entry, self.rest_minutes_entry):
+            entry.configure(validate="key", validatecommand=digits_3)
+        for entry in (self.work_seconds_entry, self.rest_seconds_entry):
+            entry.configure(validate="key", validatecommand=seconds_2)
+
         for entry in (
             self.sets_entry,
             self.work_minutes_entry,
@@ -283,6 +294,65 @@ class DrillEditorPage(ctk.CTkFrame):
             self.rest_seconds_entry,
         ):
             entry.bind("<KeyRelease>", self._refresh_duration)
+            entry.bind("<FocusIn>", self._select_entry_text)
+            entry.bind("<Return>", lambda _event: self._save())
+            entry.bind("<Escape>", lambda _event: self._cancel())
+        self.work_minutes_entry.bind(
+            "<KeyRelease>",
+            lambda event: self._minutes_key_released(
+                event, self.work_seconds_entry
+            ),
+        )
+        self.rest_minutes_entry.bind(
+            "<KeyRelease>",
+            lambda event: self._minutes_key_released(
+                event, self.rest_seconds_entry
+            ),
+        )
+        for entry in (self.work_seconds_entry, self.rest_seconds_entry):
+            entry.bind("<FocusOut>", self._normalize_seconds)
+
+        self.execution_error = ctk.CTkLabel(
+            self.execution_frame,
+            text="",
+            text_color=("#b42318", "#ff8a80"),
+            anchor="w",
+        )
+        self.execution_error.grid(
+            row=1, column=0, columnspan=3, sticky="ew", padx=8
+        )
+        ctk.CTkLabel(
+            self.execution_frame,
+            text="Total Time = Sets × (Work + Rest). Maximum total: 240:00.",
+            text_color="gray",
+            anchor="w",
+        ).grid(row=2, column=0, columnspan=3, sticky="ew", padx=8, pady=(2, 0))
+        self._refresh_duration()
+
+    @staticmethod
+    def _valid_digits(proposed, max_digits, max_value):
+        """Allow a blank value or a bounded whole number while typing."""
+        if proposed == "":
+            return True
+        if not proposed.isdigit() or len(proposed) > int(max_digits):
+            return False
+        return not max_value or int(proposed) <= int(max_value)
+
+    @staticmethod
+    def _select_entry_text(event):
+        event.widget.after_idle(lambda: event.widget.select_range(0, "end"))
+
+    def _minutes_key_released(self, event, seconds_entry):
+        self._refresh_duration(event)
+        if len(event.widget.get()) == 3 and event.keysym.isdigit():
+            seconds_entry.focus_set()
+
+    def _normalize_seconds(self, event):
+        text = event.widget.get().strip()
+        if text:
+            self._set_entry(event.widget, f"{int(text):02d}")
+        else:
+            self._set_entry(event.widget, "00")
         self._refresh_duration()
 
     def _add_execution_field(
@@ -433,13 +503,13 @@ class DrillEditorPage(ctk.CTkFrame):
         )
         cancel_button.pack(side="right", padx=(10, 0))
 
-        save_button = ctk.CTkButton(
+        self.save_button = ctk.CTkButton(
             button_frame,
             text="Save Drill",
             width=130,
             command=self._save,
         )
-        save_button.pack(side="right")
+        self.save_button.pack(side="right")
 
     def _add_label(self, text, row, column):
         label = ctk.CTkLabel(
@@ -562,7 +632,9 @@ class DrillEditorPage(ctk.CTkFrame):
                 self.rest_seconds_entry.get(),
                 "Rest",
             ) or 0)
-        except ValueError:
+        except ValueError as error:
+            if hasattr(self, "execution_error"):
+                self.execution_error.configure(text=str(error))
             return
         if sets < 0:
             return
@@ -570,6 +642,13 @@ class DrillEditorPage(ctk.CTkFrame):
         minutes, seconds = divmod(
             sets * (work_seconds + rest_seconds), 60
         )
+        over_limit = minutes > 240 or (minutes == 240 and seconds > 0)
+        if hasattr(self, "execution_error"):
+            self.execution_error.configure(
+                text="Total Time cannot exceed 240:00." if over_limit else ""
+            )
+        if hasattr(self, "save_button"):
+            self.save_button.configure(state="disabled" if over_limit else "normal")
         self.duration_entry.configure(state="normal")
         self._set_entry(self.duration_entry, f"{minutes}:{seconds:02d}")
         self.duration_entry.configure(state="readonly")
@@ -680,6 +759,13 @@ class DrillEditorPage(ctk.CTkFrame):
         total_seconds = int(sets or 1) * (
             int(work_seconds or 0) + int(rest_seconds or 0)
         )
+        if total_seconds > 240 * 60:
+            messagebox.showwarning(
+                "Invalid Time",
+                "Total Time cannot exceed 240:00. Reduce Sets, Work, or Rest.",
+            )
+            self.sets_entry.focus_set()
+            return
         duration_minutes = str(total_seconds // 60)
 
         use_execution_details = any(
@@ -740,5 +826,36 @@ class DrillEditorPage(ctk.CTkFrame):
             )
 
     def _cancel(self):
+        if self._form_changed() and not messagebox.askyesno(
+            "Discard Changes",
+            "Discard the changes made to this drill?",
+        ):
+            return
         if self.on_cancel:
             self.on_cancel()
+
+    def _remember_initial_state(self):
+        self._initial_form_state = self._form_state()
+
+    def _form_changed(self):
+        return getattr(self, "_initial_form_state", self._form_state()) != self._form_state()
+
+    def _form_state(self):
+        """Return the editable form content for change detection."""
+        return (
+            self.name_entry.get(),
+            self.block_menu.get(),
+            self.focus_entry.get(),
+            self.purpose_textbox.get("1.0", "end").strip(),
+            self.players_entry.get(),
+            self.sets_entry.get(),
+            self.work_minutes_entry.get(),
+            self.work_seconds_entry.get(),
+            self.rest_minutes_entry.get(),
+            self.rest_seconds_entry.get(),
+            self.equipment_textbox.get("1.0", "end").strip(),
+            self.coaching_points_textbox.get("1.0", "end").strip(),
+            self.progressions_textbox.get("1.0", "end").strip(),
+            self.variations_textbox.get("1.0", "end").strip(),
+            self.notes_textbox.get("1.0", "end").strip(),
+        )

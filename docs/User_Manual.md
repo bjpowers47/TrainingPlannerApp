@@ -1,4 +1,4 @@
-# Training Planner User Manual
+# Wildcat Training Planner User Manual
 
 ## Reordering Development Blocks
 

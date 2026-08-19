@@ -126,7 +126,7 @@ class TrainingPlannerApp(ctk.CTk):
         )
         title = ctk.CTkLabel(
             self.sidebar,
-            text="Training Planner",
+            text=APP_NAME,
             image=self.sidebar_logo,
             compound="left",
             font=("Segoe UI", 18, "bold"),

@@ -1,5 +1,5 @@
 """
-Training Planner Ap
+Wildcat Training Planner
 ------------------------
 
 Module:
@@ -252,6 +252,14 @@ class PracticeActivityRow(ctk.CTkFrame):
         )
         if label == "Time":
             entry.configure(state="readonly")
+        elif label == "Sets":
+            entry.configure(
+                validate="key",
+                validatecommand=(
+                    self.register(self._valid_digits), "%P", "3", ""
+                ),
+            )
+            entry.bind("<FocusIn>", self._select_entry_text)
 
         entry.pack(side="left")
 
@@ -282,19 +290,59 @@ class PracticeActivityRow(ctk.CTkFrame):
             field_frame, text=label, font=("Segoe UI", 13)
         ).pack(side="left", padx=(0, 5))
 
-        for variable, suffix, width in (
-            (minutes_variable, "min", 54),
-            (seconds_variable, "sec", 42),
+        entries = []
+        for variable, suffix, width, max_value in (
+            (minutes_variable, "min", 54, ""),
+            (seconds_variable, "sec", 42, "59"),
         ):
-            ctk.CTkEntry(
+            entry = ctk.CTkEntry(
                 field_frame,
                 width=width,
                 textvariable=variable,
                 justify="center",
-            ).pack(side="left")
+                validate="key",
+                validatecommand=(
+                    self.register(self._valid_digits),
+                    "%P",
+                    "3" if suffix == "min" else "2",
+                    max_value,
+                ),
+            )
+            entry.pack(side="left")
+            entry.bind("<FocusIn>", self._select_entry_text)
+            entries.append(entry)
             ctk.CTkLabel(
                 field_frame, text=suffix, font=("Segoe UI", 12)
             ).pack(side="left", padx=(4, 7))
+
+        entries[0].bind(
+            "<KeyRelease>",
+            lambda event: (
+                entries[1].focus_set()
+                if len(event.widget.get()) == 3 and event.keysym.isdigit()
+                else None
+            ),
+        )
+        entries[1].bind("<FocusOut>", self._normalize_seconds)
+
+    @staticmethod
+    def _valid_digits(proposed, max_digits, max_value):
+        """Allow a blank value or a bounded whole number while typing."""
+        if proposed == "":
+            return True
+        if not proposed.isdigit() or len(proposed) > int(max_digits):
+            return False
+        return not max_value or int(proposed) <= int(max_value)
+
+    @staticmethod
+    def _select_entry_text(event):
+        event.widget.after_idle(lambda: event.widget.select_range(0, "end"))
+
+    @staticmethod
+    def _normalize_seconds(event):
+        text = event.widget.get().strip()
+        event.widget.delete(0, "end")
+        event.widget.insert(0, f"{int(text or 0):02d}")
 
     # ==========================================================
     # Business Logic
@@ -433,7 +481,7 @@ class PracticeActivityRow(ctk.CTkFrame):
         if total_seconds is None:
             return ctk.StringVar(value="0"), ctk.StringVar(value="0")
         minutes, seconds = divmod(int(total_seconds), 60)
-        return ctk.StringVar(value=str(minutes)), ctk.StringVar(value=str(seconds))
+        return ctk.StringVar(value=str(minutes)), ctk.StringVar(value=f"{seconds:02d}")
 
     @staticmethod
     def _format_duration(total_seconds: float) -> str:

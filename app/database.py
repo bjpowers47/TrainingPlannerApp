@@ -1,5 +1,5 @@
 """
-SQLite database initialization for Training Planner Ap.
+SQLite database initialization for Wildcat Training Planner.
 
 This module owns the physical database connection and schema creation.
 Other parts of the application should access data through repositories.

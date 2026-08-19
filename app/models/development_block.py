@@ -1,5 +1,5 @@
 """
-Training Planner Ap
+Wildcat Training Planner
 ------------------------
 
 Module:
@@ -7,7 +7,7 @@ Module:
 
 Purpose:
     Represents one of the six Development Blocks used throughout
-    Training Planner Ap.
+    Wildcat Training Planner.
 
 Responsibilities:
     • Store the Development Block information.
