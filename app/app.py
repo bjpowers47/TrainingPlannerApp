@@ -2,7 +2,7 @@ import sqlite3
 from copy import deepcopy
 from dataclasses import asdict
 import json
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 import customtkinter as ctk
@@ -410,14 +410,27 @@ class TrainingPlannerApp(ctk.CTk):
         if safe_name.upper() in reserved_names:
             safe_name = f"_{safe_name}"
         safe_name = safe_name or "practice"
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
         filename = self.current_practice_path
+        if filename is not None:
+            overwrite = messagebox.askyesnocancel(
+                "Overwrite Existing Practice?",
+                f"This will replace the opened practice file:\n\n"
+                f"{Path(filename).name}\n\n"
+                "Choose Yes to overwrite it, No to save a new copy with a "
+                "different filename, or Cancel to return without saving.",
+                icon="warning",
+                parent=self,
+            )
+            if overwrite is None:
+                return
+            if not overwrite:
+                filename = None
+
         if filename is None:
             filename = filedialog.asksaveasfilename(
                 title="Save Practice",
                 initialdir=self.config_manager.data.get("last_practice_folder", str(PRACTICES_DIR)),
-                initialfile=f"{safe_name}_{timestamp}.json",
+                initialfile=f"{safe_name}.json",
                 defaultextension=".json",
                 filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
             )
@@ -425,7 +438,15 @@ class TrainingPlannerApp(ctk.CTk):
         if not filename:
             return
 
-        self.current_practice.save_to_json(filename)
+        try:
+            self.current_practice.save_to_json(filename)
+        except (OSError, ValueError, TypeError) as error:
+            messagebox.showerror(
+                "Save Practice",
+                f"The practice could not be saved.\n\n{error}",
+                parent=self,
+            )
+            return
         self.current_practice_path = Path(filename)
         self._saved_practice_signature = self._practice_signature(self.current_practice)
         self.config_manager.remember_practice(filename)

@@ -25,3 +25,9 @@
 - Added working drill search, block filtering, and undoable drill removal.
 - Added visible duration validation and practice-overrun feedback.
 - Improved spreadsheet-import boundaries and automated-test reliability.
+## 0.4.0
+
+- Added minutes-and-seconds timing.
+- Removed the separate Warm Up field.
+- Added URL highlighting to PDF export and direct printing.
+- Updated the application title to Training Planner.
