@@ -108,19 +108,6 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         
         self.drills_container.grid_columnconfigure(0, weight=1)
         self.drills_container.grid_rowconfigure(1, weight=1)
-
-        self.details_box = ctk.CTkTextbox(
-            self,
-            wrap="word",
-        )
-        self.details_box.grid(
-            row=1,
-            column=2,
-            rowspan=2,
-            sticky="nsew",
-            padx=10,
-            pady=10,
-        )
     def build_drill_list(self):
         """Build the drill browsing controls."""
 
@@ -214,6 +201,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
         self.details_box = ctk.CTkTextbox(
             self,
             wrap="word",
+            state="disabled",
         )
         self.details_box.grid(
             row=1,
@@ -223,6 +211,13 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
             padx=10,
             pady=10,
         )
+
+    def _set_details_text(self, text):
+        """Replace the details display while keeping it read-only for users."""
+        self.details_box.configure(state="normal")
+        self.details_box.delete("1.0", "end")
+        self.details_box.insert("end", text)
+        self.details_box.configure(state="disabled")
     def build_titles(self):
         
         """Build the page titles."""
@@ -264,17 +259,13 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
     def show_welcome_message(self):
         """Display the opening message."""
 
-        self.details_box.delete("1.0", "end")
-
         if self.selected_block:
-            self.details_box.insert(
-                "end",
+            self._set_details_text(
                 f"{self.selected_block} Drills\n\n"
                 "Select one or more drills.",
             )
         else:
-            self.details_box.insert(
-                "end",
+            self._set_details_text(
                 "Development Library\n\n"
                 "Select a Practice Block.",
             )
@@ -377,8 +368,7 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
     def show_drill_details(self, drill):
         """Display the selected drill's information."""
 
-        self.details_box.delete("1.0", "end")
-        self.details_box.insert("end", format_drill_details(drill))
+        self._set_details_text(format_drill_details(drill))
     def submit_selected_drills(self):
         """Add selected drills to the current practice."""
 
@@ -391,17 +381,13 @@ class DevelopmentLibraryPage(ctk.CTkFrame):
                 selected_drills.append(drill)
 
         if not selected_drills:
-            self.details_box.delete("1.0", "end")
-            self.details_box.insert(
-                "end",
+            self._set_details_text(
                 "Select at least one drill before continuing.",
             )
             return
 
         if self.add_to_practice_callback is None:
-            self.details_box.delete("1.0", "end")
-            self.details_box.insert(
-                "end",
+            self._set_details_text(
                 f"{len(selected_drills)} drill(s) selected.\n\n"
                 "Open the library from the Practice Builder "
                 "to add them to a practice.",

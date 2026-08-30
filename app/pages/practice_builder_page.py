@@ -32,6 +32,8 @@ class PracticeBuilderPage(ctk.CTkFrame):
         export_pdf_callback=None,
         print_callback=None,
         save_practice_callback=None,
+        load_unsaved_callback=None,
+        has_unsaved_practice=False,
         coaches=None,
     ):
         super().__init__(parent)
@@ -42,6 +44,8 @@ class PracticeBuilderPage(ctk.CTkFrame):
         self.export_pdf_callback = export_pdf_callback
         self.print_callback = print_callback
         self.save_practice_callback = save_practice_callback
+        self.load_unsaved_callback = load_unsaved_callback
+        self.has_unsaved_practice = has_unsaved_practice
         self.coaches = coaches or []
         self._drag_source = None
         self._drag_target_row = None
@@ -79,21 +83,41 @@ class PracticeBuilderPage(ctk.CTkFrame):
             font=("Segoe UI", 28, "bold"),
         )
         self.title_label.grid(row=0, column=0, sticky="w")
+        self.load_unsaved_button = ctk.CTkButton(
+            title_frame,
+            text="Load Unsaved Practice",
+            command=self.load_unsaved_callback,
+            fg_color="#9a6700",
+            hover_color="#7a5200",
+        )
+        self.load_unsaved_button.grid(row=0, column=1, sticky="e", padx=(0, 10))
+        if not self.has_unsaved_practice:
+            self.load_unsaved_button.grid_remove()
         ctk.CTkButton(
             title_frame,
             text="Save Practice",
             command=self.save_practice_callback,
-        ).grid(row=0, column=1, sticky="e", padx=(0, 10))
+        ).grid(row=0, column=2, sticky="e", padx=(0, 10))
         ctk.CTkButton(
             title_frame,
             text="Export PDF",
             command=self.export_pdf,
-        ).grid(row=0, column=2, sticky="e", padx=(0, 10))
+        ).grid(row=0, column=3, sticky="e", padx=(0, 10))
         ctk.CTkButton(
             title_frame,
             text="Print",
             command=self.print_practice,
-        ).grid(row=0, column=3, sticky="e")
+        ).grid(row=0, column=4, sticky="e")
+
+    def show_load_unsaved_button(self):
+        """Offer recovery after an autosave becomes available."""
+        self.has_unsaved_practice = True
+        self.load_unsaved_button.grid()
+
+    def hide_load_unsaved_button(self):
+        """Hide recovery when no separate autosave needs loading."""
+        self.has_unsaved_practice = False
+        self.load_unsaved_button.grid_remove()
 
     def export_pdf(self):
         """Capture current values and open the PDF save dialog."""

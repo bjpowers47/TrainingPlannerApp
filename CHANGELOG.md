@@ -31,3 +31,5 @@
 - Removed the separate Warm Up field.
 - Added URL highlighting to PDF export and direct printing.
 - Updated the application title to Training Planner.
+- Removed time stamp appended to new practice file name
+- Changed to read only the "Drills Details" in the right panel of "Development Library" as read only

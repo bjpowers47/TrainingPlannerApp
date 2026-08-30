@@ -1,12 +1,13 @@
 {
     "theme": "dark",
     "last_workbook": "",
-    "window_width": 2479,
-    "window_height": 1836,
+    "window_width": 2910,
+    "window_height": 1830,
     "sport": "JV Soccer",
     "head_coach": "Bob Powers",
     "assistant_coaches": [],
     "recent_practices": [
+        "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices\\TEst.json",
         "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices\\Long Practice - beginning of season.json",
         "C:\\Users\\bjpow\\Documents\\Codex\\TrainingPlannerApp\\practices\\Long Practice - beginning of season_2026-08-14_07-40-37.json"
     ],

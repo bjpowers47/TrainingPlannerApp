@@ -289,6 +289,8 @@ class TrainingPlannerApp(ctk.CTk):
             export_pdf_callback=self.export_practice_pdf,
             print_callback=self.print_practice,
             save_practice_callback=self.save_practice,
+            load_unsaved_callback=self.restore_autosave_from_builder,
+            has_unsaved_practice=self._has_unsaved_draft(),
             coaches=self._configured_coaches(),
         )
         self.practice_builder_page.pack(
@@ -451,6 +453,7 @@ class TrainingPlannerApp(ctk.CTk):
         self._saved_practice_signature = self._practice_signature(self.current_practice)
         self.config_manager.remember_practice(filename)
         AUTOSAVE_FILE.unlink(missing_ok=True)
+        self.practice_builder_page.hide_load_unsaved_button()
         self.status.configure(text=f"Saved: {Path(filename).name}")
 
     def export_practice_pdf(self, practice):
@@ -490,7 +493,28 @@ class TrainingPlannerApp(ctk.CTk):
         self.current_practice_path = None
         self._saved_practice_signature = None
         self.show_practice_builder()
+        self.practice_builder_page.hide_load_unsaved_button()
         self.status.configure(text="Recovered autosaved draft")
+
+    def restore_autosave_from_builder(self):
+        """Confirm before replacing the visible practice with its autosave."""
+        if not self._has_unsaved_draft():
+            messagebox.showinfo(
+                "Load Unsaved Practice",
+                "There is no unsaved practice available to load.",
+                parent=self,
+            )
+            self.practice_builder_page.hide_load_unsaved_button()
+            return
+        if not messagebox.askyesno(
+            "Load Unsaved Practice?",
+            "Loading the unsaved practice will replace the practice currently "
+            "shown in the Practice Builder.\n\nContinue?",
+            icon="warning",
+            parent=self,
+        ):
+            return
+        self.restore_autosave()
 
     @staticmethod
     def _practice_signature(practice):
