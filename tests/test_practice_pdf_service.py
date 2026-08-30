@@ -4,15 +4,23 @@ from pathlib import Path
 
 from app.models.drill import Drill
 from app.models.practice import Practice
-from app.services.practice_pdf_service import build_practice_pdf_lines, export_practice_pdf
+from app.services.practice_pdf_service import (
+    _contains_url,
+    build_practice_pdf_lines,
+    export_practice_pdf,
+)
 
 
 class PracticePdfServiceTests(unittest.TestCase):
-    def test_pdf_contains_warm_up_blocks_drill_details_and_total(self):
+    def test_url_detection_is_shared_by_print_and_pdf_renderers(self):
+        self.assertTrue(_contains_url("Watch https://example.com/demo"))
+        self.assertTrue(_contains_url("Review www.example.com/guide"))
+        self.assertFalse(_contains_url("No web address here"))
+
+    def test_pdf_contains_blocks_drill_details_and_total(self):
         practice = Practice(
             name="Tuesday Training",
             practice_date="2026-08-01",
-            warm_up_minutes=10,
         )
         practice.add_activity(
             "Ball Mastery",
@@ -32,11 +40,10 @@ class PracticePdfServiceTests(unittest.TestCase):
 
         lines = build_practice_pdf_lines(practice)
         text = "\n".join(value for _style, value in lines)
-        self.assertIn("Warm Up", text)
         self.assertIn("Ball Mastery", text)
         self.assertIn("Toe Taps", text)
         self.assertIn("Equipment: Ball, Cones", text)
-        self.assertIn("Total Planned Time: 15 min", text)
+        self.assertIn("Total Planned Time: 5:00", text)
 
         with tempfile.TemporaryDirectory() as folder:
             filename = Path(folder) / "practice.pdf"
@@ -94,7 +101,27 @@ class PracticePdfServiceTests(unittest.TestCase):
             content = filename.read_bytes()
         self.assertIn(b"Training Manager Practice Plan", content)
         self.assertIn(b"No activities planned.", content)
-        self.assertIn(b"Total Planned Time: 0 min", content)
+        self.assertIn(b"Total Planned Time: 0:00", content)
+
+    def test_printed_times_include_exact_minutes_and_seconds(self):
+        practice = Practice()
+        practice.add_activity(
+            "Ball Mastery",
+            Drill(id=1, name="Toe Taps", development_block_id=1),
+        )
+        activity = practice.get_activities("Ball Mastery")[0]
+        activity.sets = 1
+        activity.work_seconds = 75
+        activity.rest_seconds = 20
+
+        text = "\n".join(
+            value for _style, value in build_practice_pdf_lines(practice)
+        )
+
+        self.assertIn("Time: 1:35", text)
+        self.assertIn("Work: 1:15", text)
+        self.assertIn("Rest: 0:20", text)
+        self.assertIn("Total Planned Time: 1:35", text)
 
     def test_export_preserves_user_entered_line_breaks(self):
         practice = Practice(name="Multiline Practice", objective="First goal\nSecond goal")
@@ -125,6 +152,29 @@ class PracticePdfServiceTests(unittest.TestCase):
         self.assertIn(b"(Second goal) Tj", content)
         self.assertIn(b"(Directions: First direction) Tj", content)
         self.assertIn(b"(Second direction) Tj", content)
+
+    def test_export_highlights_lines_containing_urls(self):
+        practice = Practice(name="Linked Practice")
+        practice.add_activity(
+            "Ball Mastery",
+            Drill(
+                id=1,
+                name="Video Drill https://example.com/demo",
+                development_block_id=1,
+                purpose="Review www.example.com/guide before starting",
+            ),
+        )
+        practice.get_activities("Ball Mastery")[0].print_details = True
+
+        with tempfile.TemporaryDirectory() as folder:
+            filename = Path(folder) / "linked.pdf"
+            export_practice_pdf(filename, practice)
+            content = filename.read_bytes()
+
+        self.assertIn(b"% URL highlight", content)
+        self.assertEqual(content.count(b"% URL highlight"), 2)
+        self.assertIn(b"https://example.com/demo", content)
+        self.assertIn(b"www.example.com/guide", content)
 
     def test_configured_sport_prefixes_training_manager_title(self):
         practice = Practice(sport="Basketball")

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import textwrap
 import ctypes
+import re
 from ctypes import wintypes
 from pathlib import Path
 
 from app.config import training_manager_name
+from app.models.duration import format_duration
 from app.services.coaching_library import get_coaching_focus_by_id
 
 
@@ -29,7 +31,14 @@ def _join_multiline(values: list[str]) -> str:
 
 
 def _duration_text(minutes: float) -> str:
-    return f"{int(minutes)} min" if minutes.is_integer() else f"{minutes:.1f} min"
+    return format_duration(round(minutes * 60))
+
+
+_URL_PATTERN = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
+
+
+def _contains_url(value: str) -> bool:
+    return _URL_PATTERN.search(value) is not None
 
 
 def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[str, str]]:
@@ -50,9 +59,6 @@ def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[s
     if _clean_multiline(practice.objective):
         lines.append(("normal", f"Objective: {_clean_multiline(practice.objective)}"))
     lines.append(("spacer", ""))
-
-    lines.append(("heading", "Warm Up"))
-    lines.append(("normal", f"Duration: {_duration_text(float(practice.warm_up_minutes))}"))
 
     for block in practice.get_block_names():
         if coach and coach not in practice.block_coaches.get(block, []):
@@ -106,7 +112,7 @@ def build_practice_pdf_lines(practice, coach: str | None = None) -> list[tuple[s
                     lines.append(("detail", f"{label}: {value or 'Not specified'}"))
 
     lines.append(("spacer", ""))
-    lines.append(("total", f"Total Planned Time: {_duration_text(float(practice.total_duration()))}"))
+    lines.append(("total", f"Total Planned Time: {format_duration(practice.total_duration_seconds())}"))
     return lines
 
 
@@ -150,6 +156,8 @@ def print_practice(practice, coach: str | None = None) -> bool:
     gdi32.DeleteObject.argtypes = [ctypes.c_void_p]
     gdi32.DeleteDC.argtypes = [wintypes.HDC]
     gdi32.GetDeviceCaps.argtypes = [wintypes.HDC, ctypes.c_int]
+    gdi32.SetBkMode.argtypes = [wintypes.HDC, ctypes.c_int]
+    gdi32.SetBkColor.argtypes = [wintypes.HDC, wintypes.DWORD]
     gdi32.StartDocW.argtypes = [wintypes.HDC, ctypes.POINTER(DOCINFOW)]
     gdi32.StartPage.argtypes = [wintypes.HDC]
     gdi32.EndPage.argtypes = [wintypes.HDC]
@@ -192,6 +200,8 @@ def print_practice(practice, coach: str | None = None) -> bool:
     content_right = page_width - right
     content_bottom = page_height - bottom
     DT_WORDBREAK, DT_CALCRECT, DT_NOPREFIX = 0x10, 0x400, 0x800
+    TRANSPARENT, OPAQUE = 1, 2
+    URL_HIGHLIGHT_COLOR = 0x0073EDFF  # RGB(255, 237, 115) as COLORREF
     styles = {
         "title": (20, 700, 12, 0), "heading": (15, 700, 8, 0),
         "subheading": (11, 700, 4, 0), "total": (12, 700, 8, 0),
@@ -234,7 +244,13 @@ def print_practice(practice, coach: str | None = None) -> bool:
                 y = top
             if style != "spacer":
                 target = wintypes.RECT(left + indent, y, content_right, y + height + 2)
+                if _contains_url(value):
+                    gdi32.SetBkColor(hdc, URL_HIGHLIGHT_COLOR)
+                    gdi32.SetBkMode(hdc, OPAQUE)
+                else:
+                    gdi32.SetBkMode(hdc, TRANSPARENT)
                 user32.DrawTextW(hdc, value, -1, ctypes.byref(target), DT_WORDBREAK | DT_NOPREFIX)
+                gdi32.SetBkMode(hdc, TRANSPARENT)
             y += height + gap_pixels
         gdi32.EndPage(hdc)
         if gdi32.EndDoc(hdc) <= 0:
@@ -297,6 +313,15 @@ def export_practice_pdf(filename: str | Path, practice, coach: str | None = None
                 pages.append([])
                 y = top
             indent = 14 if style == "detail" else 0
+            if _contains_url(line):
+                highlight_width = min(
+                    page_width - left - indent - 54,
+                    max(24, round(len(line) * size * 0.52) + 4),
+                )
+                pages[-1].append(
+                    f"% URL highlight\nq 1 0.93 0.45 rg "
+                    f"{left + indent - 2} {y - 3} {highlight_width} {leading} re f Q"
+                )
             pages[-1].append(
                 f"BT /{font} {size} Tf 1 0 0 1 {left + indent} {y} Tm ({pdf_text(line)}) Tj ET"
             )

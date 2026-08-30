@@ -6,9 +6,9 @@ from app.models.drill import Drill
 from app.models.practice import Practice
 
 
-class PracticeWarmUpTests(unittest.TestCase):
-    def test_warm_up_is_included_in_total_without_becoming_an_activity(self):
-        practice = Practice(warm_up_minutes=12)
+class RemovedWarmUpTests(unittest.TestCase):
+    def test_total_is_calculated_only_from_activities(self):
+        practice = Practice()
         practice.add_activity(
             "Ball Mastery",
             Drill(
@@ -22,29 +22,30 @@ class PracticeWarmUpTests(unittest.TestCase):
             ),
         )
 
-        self.assertEqual(practice.total_duration(), 20)
+        self.assertEqual(practice.total_duration(), 8)
         self.assertEqual(practice.activity_count(), 1)
         self.assertEqual(practice.get_block_names()[0], "Ball Mastery")
 
-    def test_warm_up_survives_json_round_trip(self):
-        practice = Practice(name="Tuesday", warm_up_minutes=10)
-        with tempfile.TemporaryDirectory() as folder:
-            filename = Path(folder) / "practice.json"
-            practice.save_to_json(str(filename))
-            restored = Practice.load_from_json(str(filename))
-
-        self.assertEqual(restored.warm_up_minutes, 10)
-        self.assertEqual(restored.total_duration(), 10)
-
-    def test_older_practice_files_default_to_no_warm_up(self):
+    def test_legacy_warm_up_value_is_ignored_when_loading(self):
         with tempfile.TemporaryDirectory() as folder:
             filename = Path(folder) / "practice.json"
             filename.write_text(
-                '{"name": "Old Practice", "activities": {}}', encoding="utf-8"
+                '{"name": "Old Practice", "warm_up_minutes": 10, "activities": {}}',
+                encoding="utf-8",
             )
             restored = Practice.load_from_json(str(filename))
 
-        self.assertEqual(restored.warm_up_minutes, 0)
+        self.assertFalse(hasattr(restored, "warm_up_minutes"))
+        self.assertEqual(restored.total_duration(), 0)
+
+    def test_new_practice_files_do_not_save_a_warm_up_field(self):
+        practice = Practice(name="Tuesday")
+        with tempfile.TemporaryDirectory() as folder:
+            filename = Path(folder) / "practice.json"
+            practice.save_to_json(str(filename))
+            content = filename.read_text(encoding="utf-8")
+
+        self.assertNotIn("warm_up_minutes", content)
 
 
 if __name__ == "__main__":

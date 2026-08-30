@@ -27,7 +27,6 @@ class Practice:
     practice_date: str = ""
     team_name: str = ""
     objective: str = ""
-    warm_up_minutes: float = 0
     target_minutes: float = 90
     selected_blocks: list[str] = field(default_factory=list)
     block_coaches: dict[str, list[str]] = field(default_factory=dict)
@@ -137,13 +136,22 @@ class Practice:
     def total_duration(self) -> int:
         """Return the total planned practice duration in minutes."""
 
-        total = max(0, self.warm_up_minutes)
+        total = 0
 
         for activities in self.activities.values():
             for activity in activities:
                 total += activity.duration_minutes()
 
         return round(total * 2) / 2
+
+    def total_duration_seconds(self) -> int:
+        """Return the exact total planned duration in seconds."""
+        total = 0
+        for activities in self.activities.values():
+            for activity in activities:
+                total += round(activity.duration_minutes() * 60)
+        return total
+
     def save_to_json(self, filename: str) -> None:
         """Save the practice to a JSON file."""
 
@@ -154,7 +162,6 @@ class Practice:
             "practice_date": self.practice_date,
             "team_name": self.team_name,
             "objective": self.objective,
-            "warm_up_minutes": self.warm_up_minutes,
             "target_minutes": self.target_minutes,
             "selected_blocks": self.selected_blocks,
             "block_coaches": self.block_coaches,
@@ -200,7 +207,6 @@ class Practice:
                 "objective",
                 "",
             ),
-            warm_up_minutes=max(0, float(practice_data.get("warm_up_minutes", 0) or 0)),
             target_minutes=max(0, float(practice_data.get("target_minutes", 90) or 90)),
             selected_blocks=practice_data.get("selected_blocks", []),
             block_coaches=practice_data.get("block_coaches", {}),

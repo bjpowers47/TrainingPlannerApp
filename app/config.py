@@ -6,6 +6,7 @@ import sys
 from app.services.atomic_json import write_json_atomic
 
 APP_NAME = "Wildcat Training Planner"
+WINDOW_TITLE = "Training Planner"
 APP_VERSION = "0.3.0"
 
 RESOURCE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).parent.parent))
@@ -35,7 +36,6 @@ DEFAULT_CONFIG = {
     "last_workbook": "",
     "window_width": 1400,
     "window_height": 900,
-    "title": APP_NAME,
     "sport": "",
     "head_coach": "",
     "assistant_coaches": [],

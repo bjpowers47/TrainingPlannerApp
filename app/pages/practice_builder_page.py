@@ -11,6 +11,7 @@ Purpose:
 
 import customtkinter as ctk
 from tkinter import messagebox
+from app.models.duration import format_duration, format_signed_duration
 from app.models.player_development import (
     get_display_name
 )
@@ -115,7 +116,6 @@ class PracticeBuilderPage(ctk.CTkFrame):
             pady=10,
         )
 
-        self.build_warm_up_section()
         self.block_sections = {}
 
         for block in self.practice.get_block_names():
@@ -245,44 +245,6 @@ class PracticeBuilderPage(ctk.CTkFrame):
         self._build_block_section(block, before=next_section)
         self.refresh_summary()
 
-    def build_warm_up_section(self):
-        """Build the fixed warm-up section shown before development blocks."""
-        section = ctk.CTkFrame(self.block_frame)
-        section.pack(fill="x", padx=10, pady=8)
-
-        ctk.CTkLabel(
-            section,
-            text="Warm Up",
-            font=("Segoe UI", 22, "bold"),
-            text_color="yellow",
-        ).pack(anchor="w", padx=15, pady=(12, 4))
-
-        separator = ctk.CTkFrame(section, height=2)
-        separator.pack(fill="x", padx=15, pady=(0, 10))
-
-        duration_frame = ctk.CTkFrame(section, fg_color="transparent")
-        duration_frame.pack(anchor="w", padx=25, pady=(0, 12))
-        ctk.CTkLabel(duration_frame, text="Warm-up duration:").pack(side="left")
-
-        self.warm_up_duration_var = ctk.StringVar(
-            value=str(self.practice.warm_up_minutes)
-        )
-        self.warm_up_duration_entry = ctk.CTkEntry(
-            duration_frame,
-            width=60,
-            textvariable=self.warm_up_duration_var,
-            justify="center",
-        )
-        self.warm_up_duration_entry.pack(side="left", padx=(8, 6))
-        self.warm_up_duration_entry.bind(
-            "<KeyRelease>", lambda _event: self.save_warm_up_duration()
-        )
-        ctk.CTkLabel(duration_frame, text="min").pack(side="left")
-        self.warm_up_error = ctk.CTkLabel(
-            duration_frame, text="", text_color="#ff8a80"
-        )
-        self.warm_up_error.pack(side="left", padx=(10, 0))
-
     def build_summary(self):
         """Build the complete Practice Summary section."""
 
@@ -330,15 +292,15 @@ class PracticeBuilderPage(ctk.CTkFrame):
             padx=10,
             pady=(0, 6),
         )
-        column_widths = (150, 80, 100, 90, 100, 220)
-        headings = ("Coach", "Activities", "Warm-up", "Planned", "Remaining", "Progress")
+        column_widths = (150, 80, 90, 100, 220)
+        headings = ("Coach", "Activities", "Planned", "Remaining", "Progress")
         for column, (heading, width) in enumerate(zip(headings, column_widths)):
-            self.summary_table.grid_columnconfigure(column, weight=1 if column == 5 else 0)
+            self.summary_table.grid_columnconfigure(column, weight=1 if column == 4 else 0)
             ctk.CTkLabel(
                 self.summary_table,
                 text=heading,
                 width=width,
-                anchor="w" if column in (0, 5) else "center",
+                anchor="w" if column in (0, 4) else "center",
                 font=ctk.CTkFont(size=13, weight="bold"),
             ).grid(row=0, column=column, sticky="ew", padx=4, pady=(0, 4))
 
@@ -352,7 +314,6 @@ class PracticeBuilderPage(ctk.CTkFrame):
             for column, (key, width) in enumerate((
                 ("coach", 150),
                 ("activities", 80),
-                ("warm_up", 100),
                 ("planned", 90),
                 ("remaining", 100),
             )):
@@ -366,7 +327,7 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 values[key] = label
 
             progress_cell = ctk.CTkFrame(self.summary_table, fg_color="transparent")
-            progress_cell.grid(row=row, column=5, sticky="ew", padx=4, pady=3)
+            progress_cell.grid(row=row, column=4, sticky="ew", padx=4, pady=3)
             progress_cell.grid_columnconfigure(0, weight=1)
             bar = ctk.CTkProgressBar(progress_cell)
             bar.grid(row=0, column=0, sticky="ew", padx=(0, 8))
@@ -514,35 +475,12 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 "end",
             ).strip()
         )
-        self.save_warm_up_duration()
         try:
             duration = float(self.practice_duration_var.get())
             if duration > 0:
                 self.practice.target_minutes = duration
         except ValueError:
             pass
-
-    def save_warm_up_duration(self) -> None:
-        """Copy a valid non-negative warm-up duration into the practice."""
-        text = self.warm_up_duration_var.get().strip()
-        error = ""
-        if text == "":
-            self.practice.warm_up_minutes = 0
-        else:
-            try:
-                minutes = float(text)
-            except ValueError:
-                self.warm_up_error.configure(text="Enter a number")
-                return
-            if minutes < 0:
-                self.warm_up_error.configure(text="Cannot be negative")
-                return
-            if minutes * 2 != int(minutes * 2):
-                self.warm_up_error.configure(text="Use whole or half minutes")
-                return
-            self.practice.warm_up_minutes = minutes
-        self.warm_up_error.configure(text=error)
-        self.refresh_summary()
 
     def validate_practice_name(self) -> bool:
         """Require a name before a practice can be saved."""
@@ -579,18 +517,25 @@ class PracticeBuilderPage(ctk.CTkFrame):
                 else [b for b, names in self.practice.block_coaches.items() if coach in names]
             )
             count = sum(len(self.practice.activities.get(b, [])) for b in assigned)
-            minutes = sum(a.duration_minutes() for b in assigned for a in self.practice.activities.get(b, []))
-            warm_up = 0 if coach == "Unassigned" else self.practice.warm_up_minutes
-            remaining = target_minutes - warm_up - minutes
-            raw_percent = (minutes + warm_up) / target_minutes * 100 if target_minutes else 0
+            planned_seconds = sum(
+                round(a.duration_minutes() * 60)
+                for b in assigned
+                for a in self.practice.activities.get(b, [])
+            )
+            target_seconds = round(target_minutes * 60)
+            remaining_seconds = target_seconds - planned_seconds
+            raw_percent = (
+                planned_seconds / target_seconds * 100
+                if target_seconds
+                else 0
+            )
             self.coach_progress[coach].set(min(100, raw_percent) / 100)
             values = self.coach_summary_values[coach]
             values["activities"].configure(text=str(count))
-            values["warm_up"].configure(text=f"{warm_up:g} min")
-            values["planned"].configure(text=f"{minutes:g} min")
+            values["planned"].configure(text=format_duration(planned_seconds))
             values["remaining"].configure(
-                text=f"{remaining:g} min",
-                text_color="#ff8a80" if remaining < 0 else ("gray10", "gray90"),
+                text=format_signed_duration(remaining_seconds),
+                text_color="#ff8a80" if remaining_seconds < 0 else ("gray10", "gray90"),
             )
             values["progress"].configure(
                 text=f"{raw_percent:.0f}%" + (" over" if raw_percent > 100 else ""),

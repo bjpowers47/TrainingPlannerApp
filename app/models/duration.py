@@ -27,6 +27,13 @@ def format_duration(total_seconds: float | int) -> str:
     return f"{minutes}:{seconds:02d}"
 
 
+def format_signed_duration(total_seconds: float | int) -> str:
+    """Format a duration as minutes:seconds while preserving a negative sign."""
+    rounded_seconds = round(total_seconds)
+    sign = "-" if rounded_seconds < 0 else ""
+    return f"{sign}{format_duration(abs(rounded_seconds))}"
+
+
 def execution_total_seconds(sets, work_seconds, rest_seconds) -> int:
     """Calculate Sets × (Work + Rest) with natural empty defaults."""
     set_count = int(sets or 1)

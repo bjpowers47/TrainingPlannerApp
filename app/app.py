@@ -42,6 +42,7 @@ from app.services.drill_spreadsheet_service import (
 from app.config import (
     APP_NAME, APP_VERSION, AUTOSAVE_FILE, BACKUP_DIR, PRACTICES_DIR,
     RESOURCE_ROOT, ROOT, training_manager_name,
+    WINDOW_TITLE,
 )
 from app.services.database_maintenance_service import DatabaseMaintenanceService
 from app.services.practice_output_controller import PracticeOutputController
@@ -69,7 +70,7 @@ class TrainingPlannerApp(ctk.CTk):
         self.current_practice = Practice()
         self.current_practice_path = None
         self._saved_practice_signature = self._practice_signature(self.current_practice)
-        self.title(APP_NAME)
+        self.title(WINDOW_TITLE)
         self.geometry(
             f"{self.config_manager.data.get('window_width', 1400)}x"
             f"{self.config_manager.data.get('window_height', 900)}"
@@ -106,7 +107,9 @@ class TrainingPlannerApp(ctk.CTk):
     def build_ui(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        self.banner = ctk.CTkLabel(self, text=self.config_manager.data.get("title", APP_NAME)[:40], font=("Segoe UI", 22, "bold"), height=42)
+        self.banner = ctk.CTkLabel(
+            self, text=WINDOW_TITLE, font=("Segoe UI", 22, "bold"), height=42
+        )
         self.banner.grid(row=0, column=0, columnspan=2, sticky="ew")
 
         self.sidebar = ctk.CTkFrame(self, width=220)
@@ -541,7 +544,7 @@ class TrainingPlannerApp(ctk.CTk):
         ConfigurationPage(self.content, self.config_manager, self.repositories.development_blocks, self._configuration_saved).pack(fill="both", expand=True)
 
     def _configuration_saved(self):
-        self.banner.configure(text=self.config_manager.data.get("title", APP_NAME)[:40])
+        self.banner.configure(text=WINDOW_TITLE)
         self.database_maintenance.manager_name = training_manager_name(
             self.config_manager.data.get("sport", "")
         )
