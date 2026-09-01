@@ -107,8 +107,18 @@ class TrainingPlannerApp(ctk.CTk):
     def build_ui(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
+        self.banner_logo = ctk.CTkImage(
+            light_image=Image.open(self.logo_path),
+            dark_image=Image.open(self.logo_path),
+            size=(42, 42),
+        )
         self.banner = ctk.CTkLabel(
-            self, text=WINDOW_TITLE, font=("Segoe UI", 22, "bold"), height=42
+            self,
+            text=WINDOW_TITLE,
+            image=self.banner_logo,
+            compound="left",
+            font=("Segoe UI", 22, "bold"),
+            height=52,
         )
         self.banner.grid(row=0, column=0, columnspan=2, sticky="ew")
 
@@ -118,16 +128,9 @@ class TrainingPlannerApp(ctk.CTk):
         self.content = ctk.CTkFrame(self)
         self.content.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
 
-        self.sidebar_logo = ctk.CTkImage(
-            light_image=Image.open(self.logo_path),
-            dark_image=Image.open(self.logo_path),
-            size=(52, 52),
-        )
         title = ctk.CTkLabel(
             self.sidebar,
-            text=APP_NAME,
-            image=self.sidebar_logo,
-            compound="left",
+            text="Menu",
             font=("Segoe UI", 18, "bold"),
         )
         title.pack(pady=20)

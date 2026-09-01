@@ -6,8 +6,8 @@ import sys
 from app.services.atomic_json import write_json_atomic
 
 APP_NAME = "Wildcat Training Planner"
-WINDOW_TITLE = "Training Planner"
-APP_VERSION = "0.4.0"
+WINDOW_TITLE = "Wildcat Training Planner"
+APP_VERSION = "1.0.1"
 
 RESOURCE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).parent.parent))
 ROOT = (
